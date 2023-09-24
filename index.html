@@ -46,18 +46,28 @@
     // Populate the selector options with flightpath filenames
     fetch('/listflightpaths')
         .then(response => response.json())
-        .then(files => {
-            const select = L.control({position: 'topright'});
-            select.onAdd = function () {
-                const div = L.DomUtil.create('div');
-                let select_html = '<select id="flightpaths-select" onchange="loadData(this.value)"><option>Select a flight path</option>';
-                files.forEach(file => { select_html += `<option value="${file}">${file}</option>`; });
-                select_html += '</select>';
-                div.innerHTML = select_html;
-                return div;
-            };
-            select.addTo(map);
-        });
+        .then(files => createDropdown(files))
+        // static fallback for when the node server is not running to provide a list of files.
+        .catch(() => createDropdown([
+            'AK_Anchorage_60_miles.json',
+            'WA_Seattle_10_miles.json',
+            'WA_Seattle_60_miles.json',
+            'WA_Bellingham_60_miles.json',
+
+        ]))
+
+    function createDropdown(files){
+        const select = L.control({position: 'topright'});
+        select.onAdd = function () {
+            const div = L.DomUtil.create('div');
+            let select_html = '<select id="flightpaths-select" onchange="loadData(this.value)"><option>Select a flight path</option>';
+            files.forEach(file => { select_html += `<option value="${file}">${file}</option>`; });
+            select_html += '</select>';
+            div.innerHTML = select_html;
+            return div;
+        };
+        select.addTo(map);
+    }
 </script>
 </body>
 </html>
