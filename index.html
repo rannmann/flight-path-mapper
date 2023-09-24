@@ -33,7 +33,8 @@
             // If there is an existing geoJSON layer, remove it before adding a new one
             map.removeLayer(geoLayer);
         }
-        fetch('/flightpaths/' + filename)
+        const baseUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "flightpaths/";
+        fetch(baseUrl + filename)
             .then(response => response.json())
             .then(data => {
                 geoLayer = L.geoJSON(data, {
