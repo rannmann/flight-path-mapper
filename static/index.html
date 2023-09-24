@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Flight Paths Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        #mapid {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<div id="mapid"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    let map = L.map('mapid').setView([47.6097, -122.3331], 7);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+    }).addTo(map);
+
+    // Variable to hold the geoJSON layer
+    let geoLayer;
+
+    function loadData(filename) {
+        if(geoLayer) {
+            // If there is an existing geoJSON layer, remove it before adding a new one
+            map.removeLayer(geoLayer);
+        }
+        fetch('/flightpaths/' + filename)
+            .then(response => response.json())
+            .then(data => {
+                geoLayer = L.geoJSON(data, {
+                    color: 'blue',
+                    weight: 1,
+                }).addTo(map);
+            });
+    }
+
+    // Populate the selector options with flightpath filenames
+    fetch('/listflightpaths')
+        .then(response => response.json())
+        .then(files => {
+            const select = L.control({position: 'topright'});
+            select.onAdd = function () {
+                const div = L.DomUtil.create('div');
+                let select_html = '<select id="flightpaths-select" onchange="loadData(this.value)"><option>Select a flight path</option>';
+                files.forEach(file => { select_html += `<option value="${file}">${file}</option>`; });
+                select_html += '</select>';
+                div.innerHTML = select_html;
+                return div;
+            };
+            select.addTo(map);
+        });
+</script>
+</body>
+</html>
