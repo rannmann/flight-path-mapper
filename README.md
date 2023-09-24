@@ -50,4 +50,4 @@ just serves `index.html` and the `flightpaths` directory.
 Open your browser to `http://localhost:3000`.  In the top-right corner, you'll see a dropdown
 for all the files you've generated.  Select one and it'll load the path overlay.
 
-Alternatively you can upload html and the flightpaths directory to a real webserver and view it.
+Alternatively you can upload `index.html` and the flightpaths directory to a real webserver and view it.

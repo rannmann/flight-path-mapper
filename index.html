@@ -44,7 +44,7 @@
     }
 
     // Populate the selector options with flightpath filenames
-    fetch('http://localhost:3000/listflightpaths')
+    fetch('/listflightpaths')
         .then(response => response.json())
         .then(files => {
             const select = L.control({position: 'topright'});
