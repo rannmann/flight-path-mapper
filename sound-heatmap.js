@@ -1,4 +1,4 @@
-const {calculateLoudness, calculateRadius, addLoudnessToGrid} = require('./lib/aircraft');
+const {addLoudnessToGrid, debugOutput} = require('./lib/aircraft');
 const fs = require("fs");
 const zlib = require("zlib");
 const path = require("path");
@@ -12,6 +12,8 @@ function processPlanes(planes) {
         //console.log(plane);
         addLoudnessToGrid(plane, grid);
     });
+    console.log(grid);
+    //debugOutput();
 }
 
 const directory = 'flight-history/2023-09-01';
