@@ -1,4 +1,4 @@
-const {addLoudnessToGrid, debugOutput} = require('./lib/aircraft');
+const {addLoudnessToGrid, convertGridBackToDegrees, debugOutput} = require('./lib/aircraft');
 const fs = require("fs");
 const zlib = require("zlib");
 const path = require("path");
@@ -12,7 +12,8 @@ function processPlanes(planes) {
         //console.log(plane);
         addLoudnessToGrid(plane, grid);
     });
-    console.log(grid);
+    //console.log(grid);
+    console.log(convertGridBackToDegrees(grid));
     //debugOutput();
 }
 
