@@ -28,18 +28,19 @@
     }).addTo(map);
 
     const cfg = {
-        "radius": 1,
+        "radius": .02,
         "maxOpacity": .6,
 
         // scales the radius based on map zoom
         "scaleRadius": true,
 
         // uses the data maximum within the current map boundaries
-        "useLocalExtrema": true,
+        // TODO: Make this toggleable.  This will ignore our custom "Max" value.
+        //"useLocalExtrema": true,
 
-        latField: 0,
-        lngField: 1,
-        valueField: 2
+        latField: 'la',
+        lngField: 'ln',
+        valueField: 'v'
     };
     const heatmapLayer = new HeatmapOverlay(cfg);
 
@@ -51,8 +52,13 @@
             console.log(invalidEntries); // this should ideally print an empty array
 
             const formattedData = {
-                max: data.reduce((max, arr) => arr[2] > max ? arr[2] : max, 0),
-                data: data
+                //max: data.reduce((max, arr) => arr[2] > max ? arr[2] : max, 0) / 10,
+                // 1 = 1 mid-size jet overhead for at least 5 seconds.
+                max: (
+                    (60/5) // Data points per minute
+                    * 5 // Five minutes of continuous mid-size jet overhead
+                ),
+                data: data.map(item => ({la: item[0],ln: item[1],v: item[2]})) // transformation happens here
             };
 
             console.log(formattedData);

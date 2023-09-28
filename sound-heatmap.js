@@ -23,6 +23,37 @@ function processPlanes(planes) {
             addLoudnessToGrid(plane, grid);
         }
     });
+}
+
+
+// Todo: for now, just read the first 500 files
+async function processDataInFiles() {
+    const directory = 'flight-history/2023-09-01';
+
+    const filesInDir = fs.readdirSync(directory);
+    const targetFiles = filesInDir.slice(0, 500);
+
+    for (const file of targetFiles) {
+        let dataString = '';
+        const gunzip = zlib.createGunzip();
+        const stream = fs.createReadStream(path.join(directory, file)).pipe(gunzip);
+
+        for await (const chunk of stream) {
+            dataString += chunk.toString();
+        }
+
+        try {
+            const data = JSON.parse(dataString);
+            processPlanes(data.aircraft);
+        } catch (err) {
+            console.error(`Failed to parse file ${file}:`, err);
+        }
+    }
+}
+
+
+async function main() {
+    await processDataInFiles().catch((err) => console.error(err));
 
     // Write grid to file
     fs.writeFile('heatmap-grid.json', JSON.stringify(convertGridBackToDegrees(grid)), function(err) {
@@ -33,21 +64,8 @@ function processPlanes(planes) {
     });
 }
 
-const directory = 'flight-history/2023-09-01';
-const files = fs.readdirSync(directory);
-const gunzip = zlib.createGunzip();
+main();
 
-let dataString = '';
-
-// Todo: for now, just read the first file and load it into
-const stream = fs.createReadStream(path.join(directory, files[0])).pipe(gunzip);
-stream.on('data', chunk => {
-    dataString += chunk.toString();
-});
-stream.on('end', () => {
-    const data = JSON.parse(dataString);
-    processPlanes(data.aircraft);
-});
 
 // WIP notes:
 // It looks like some planes may be included in the dataset without
