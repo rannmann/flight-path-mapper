@@ -2,6 +2,16 @@ const {addLoudnessToGrid, convertGridBackToDegrees, debugOutput} = require('./li
 const fs = require("fs");
 const zlib = require("zlib");
 const path = require("path");
+const Geo = require('./lib/geo');
+
+// Every city in here will have a flight path generated.
+// The more you have, the more RAM it uses, so be careful.
+const GENERATOR_COORDINATES = {
+    'USA_WA_Seattle': {lat: 47.6062, lon: -122.3321},
+};
+
+// Array of Radii in miles to generate multiple paths in one iteration.
+let radii = [50];
 
 // Our grid
 let grid = {};
@@ -9,12 +19,18 @@ let grid = {};
 // Function to process all planes
 function processPlanes(planes) {
     planes.forEach(plane => {
-        //console.log(plane);
-        addLoudnessToGrid(plane, grid);
+        if (Geo.distanceInMiles(plane.lat, plane.lon, 47.6062, -122.3321) < 20) {
+            addLoudnessToGrid(plane, grid);
+        }
     });
-    //console.log(grid);
-    console.log(convertGridBackToDegrees(grid));
-    //debugOutput();
+
+    // Write grid to file
+    fs.writeFile('heatmap-grid.json', JSON.stringify(convertGridBackToDegrees(grid)), function(err) {
+        if(err) {
+            return console.log(err);
+        }
+        console.log("The file was saved!");
+    });
 }
 
 const directory = 'flight-history/2023-09-01';

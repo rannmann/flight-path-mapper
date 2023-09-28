@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Flight Paths Noise Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        #mapid {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<div id="mapid"></div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.2/heatmap.min.js"></script>
+<script src="https://cdn.rawgit.com/pa7/heatmap.js/develop/plugins/leaflet-heatmap/leaflet-heatmap.js"></script>
+
+<script>
+    let map = L.map('mapid').setView([47.6097, -122.3331], 7);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+    }).addTo(map);
+
+    const cfg = {
+        "radius": 1,
+        "maxOpacity": .6,
+
+        // scales the radius based on map zoom
+        "scaleRadius": true,
+
+        // uses the data maximum within the current map boundaries
+        "useLocalExtrema": true,
+
+        latField: 0,
+        lngField: 1,
+        valueField: 2
+    };
+    const heatmapLayer = new HeatmapOverlay(cfg);
+
+    // Fetching and using the JSON data
+    fetch('heatmap-grid.json')
+        .then(response => response.json())
+        .then(data => {
+            const invalidEntries = data.filter(item => item.some(value => typeof value === 'undefined'));
+            console.log(invalidEntries); // this should ideally print an empty array
+
+            const formattedData = {
+                max: data.reduce((max, arr) => arr[2] > max ? arr[2] : max, 0),
+                data: data
+            };
+
+            console.log(formattedData);
+            heatmapLayer.setData(formattedData);
+            heatmapLayer.addTo(map);
+        });
+</script>
+</body>
+</html>
