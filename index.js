@@ -4,6 +4,7 @@ const path = require('path');
 const {Worker, isMainThread, parentPort, workerData} = require('worker_threads');
 const async = require('async');
 const os = require('os');
+const geo = require('./lib/geo');
 
 // Reduces granularity of data by skipping every-other file.
 // This means the result set will represent every 10s instead of every 5s.
@@ -30,54 +31,21 @@ const GENERATOR_COORDINATES = {
 // Array of Radii in miles to generate multiple paths in one iteration.
 let radii = [20];
 
-/**
- * Function to calculate distance between two geographical coordinates.
- *
- * @param lat1
- * @param lon1
- * @param lat2
- * @param lon2
- * @returns {number}
- */
-function distance(lat1, lon1, lat2, lon2) {
-    let R = 3958.8; // Radius of the earth in miles
-    let φ1 = toRadians(lat1);
-    let φ2 = toRadians(lat2);
-    let Δφ = toRadians(lat2 - lat1);
-    let Δλ = toRadians(lon2 - lon1);
-
-    let a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-        Math.cos(φ1) * Math.cos(φ2) *
-        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
-}
-
-/**
- * Function to convert degrees to radians.
- *
- * @param degrees
- * @returns {number}
- */
-function toRadians(degrees) {
-    return degrees * Math.PI / 180;
-}
 
 /**
  * Function to check if a geographical coordinate is within a given radius.
  * Returns an object with a boolean for each city.
  *
- * @param lat
- * @param lon
- * @param radius
+ * @param {number} lat
+ * @param {number} lon
+ * @param {number} radius in miles
  * @returns {{}}
  */
 function isWithinRadius(lat, lon, radius) {
     let result = {};
 
     for (const city in GENERATOR_COORDINATES) {
-        result[city] = distance(GENERATOR_COORDINATES[city].lat, GENERATOR_COORDINATES[city].lon, lat, lon) <= radius;
+        result[city] = geo.distanceInMiles(lat, lon, GENERATOR_COORDINATES[city].lat, GENERATOR_COORDINATES[city].lon) <= radius;
     }
 
     return result;
@@ -170,6 +138,11 @@ if (isMainThread) {
             const data = JSON.parse(dataString);
 
             data.aircraft.forEach(plane => {
+                if (!plane.lat || !plane.lon) {
+                    // No location data, nothing to graph.
+                    return;
+                }
+
                 let cityRadius = isWithinRadius(plane.lat, plane.lon, radius);
 
                 for (const city in cityRadius) {
