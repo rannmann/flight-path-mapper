@@ -29,7 +29,7 @@
 
     const cfg = {
         "radius": .02,
-        "maxOpacity": .6,
+        "maxOpacity": .4,
 
         // scales the radius based on map zoom
         "scaleRadius": true,
@@ -53,10 +53,10 @@
 
             const formattedData = {
                 //max: data.reduce((max, arr) => arr[2] > max ? arr[2] : max, 0) / 10,
-                // 1 = 1 mid-size jet overhead for at least 5 seconds.
+                // TODO: Check the math, then make a slider for max threshold on UI.
                 max: (
                     (60/5) // Data points per minute
-                    * 5 // Five minutes of continuous mid-size jet overhead
+                    * 15 // Fifteen minutes of continuous mid-size jet overhead per day.
                 ),
                 data: data.map(item => ({la: item[0],ln: item[1],v: item[2]})) // transformation happens here
             };
