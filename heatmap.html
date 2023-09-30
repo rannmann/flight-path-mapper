@@ -50,62 +50,52 @@
 <script src="https://cdn.rawgit.com/pa7/heatmap.js/develop/plugins/leaflet-heatmap/leaflet-heatmap.js"></script>
 
 <script>
+    // Variables and configurations
+    // Setting the view to Seattle by default, but this will be overridden if we have incoming settings via hash.
     let map = L.map('mapid').setView([47.6097, -122.3331], 9);
     let slider = document.getElementById('slider');
-    // Each data point is represented by a 5-second interval, so 12 data points per minute.
-    let formattedData = {};
+    let datapoints = {};
 
+    // Set base layer for the map
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
     }).addTo(map);
 
-    const cfg = {
-        // Radius of 0.02 degrees is 0.87km at latitude 65, and 2.22km at the equator.
-        // This is a reasonable start point for the radius.
+    const heatmapCfg = {
         "radius": .02,
         "maxOpacity": .4,
         "blur": 1,
-
-        // scales the radius based on map zoom
         "scaleRadius": true,
-
-        // uses the data maximum within the current map boundaries
-        // TODO: Make this toggleable.  This will ignore our custom "Max" value.
-        //"useLocalExtrema": true,
-
         latField: 'la',
         lngField: 'ln',
         valueField: 'v'
     };
-    const heatmapLayer = new HeatmapOverlay(cfg);
+    const heatmapLayer = new HeatmapOverlay(heatmapCfg);
 
     // Function to calculate circle radius for area = 1km^2
-    const calcRadiusInDegrees = (position, isLongitude = false) => {
+    const getRadiusInDegrees = (position, isLongitude = false) => {
         let rKm = Math.sqrt(1 / Math.PI);
         let rDeg = rKm / 111.32; // convert km to degree
         if (isLongitude) rDeg *= Math.cos(position.lat * Math.PI / 180);
         return rDeg;
     };
 
+    // Setting up the moveend event on the map
     map.on("moveend", function () {
         const currPosition = map.getCenter();
-        console.debug(currPosition);
-        // Multiply the radius so the data points blend together more smoothly.  Otherwise, we get
-        // 1km dots everywhere.  Since we have 1.0 blurring, everything needs to be a bit larger.
-        cfg.radius = calcRadiusInDegrees(currPosition, true) * 7;
-        console.debug('Radius: ' + cfg.radius);
-        heatmapLayer.cfg.radius = cfg.radius;
+        heatmapCfg.radius = getRadiusInDegrees(currPosition, true) * 7;
+        heatmapLayer.cfg.radius = heatmapCfg.radius;
+        // persisting state in url
         window.location.hash = [currPosition.lat, currPosition.lng, map.getZoom(), slider.value].join(",");
     });
 
-    // Function for setting heatmap data
-    const setHeatmapData = (maxValue) => {
-        console.debug('Setting heatmap data with max value: ' + maxValue);
-        formattedData.max = maxValue;
-        heatmapLayer.setData(formattedData);
+    // Load heatmap data on UI
+    const loadHeatmapData = (maxValue) => {
+        datapoints.max = maxValue;
+        heatmapLayer.setData(datapoints);
     };
 
-    // Debounce so we don't destroy GPUs as we slide through hundreds of values
+    // Adding a slider with a delay time of 75ms to prevent overlapping calls
     let isThrottled = false;
     let lastKnownValue = 0;
     slider.oninput = function () {
@@ -116,38 +106,42 @@
 
             setTimeout(() => {
                 isThrottled = false;
-                setHeatmapData(lastKnownValue);
+                loadHeatmapData(lastKnownValue);
+                // persisting state in url
                 window.location.hash = [map.getCenter().lat, map.getCenter().lng, map.getZoom(), lastKnownValue].join(",");
             }, 75); // Delay in ms
         }
     }
 
-    // Fetching and using the JSON data
+    // Fetching heatmap data from store and applying the settings
     fetch('heatmap-grid.json')
         .then(response => response.json())
         .then(data => {
-            formattedData = {
-                // TODO: Check the math so we can explain what the slider means.
+            datapoints = {
                 data: data.map(item => ({la: item[0], ln: item[1], v: item[2]}))
             };
 
-            if(window.location.hash !== "") {
-                // Incoming link had settings.  Use them.
+            // Check if we have incoming settings. If we do, use them.
+            if (window.location.hash !== "") {
                 const values = window.location.hash.substring(1).split(",");
-                const lat = parseFloat(values[0]);
-                const lng = parseFloat(values[1]);
-                const zoom = parseInt(values[2]);
-                const intensity = parseInt(values[3]);
-                map.setView([lat, lng], zoom);
-                slider.value = intensity;
-                setHeatmapData(intensity);
-            }else{
-                setHeatmapData(slider.value);
+                loadMapWithHashSettings(values);
+            } else {
+                loadHeatmapData(slider.value);
             }
 
-            setHeatmapData(slider.value);
             heatmapLayer.addTo(map);
         });
+
+    // Helper function to load map with hash settings.
+    const loadMapWithHashSettings = (values) => {
+        const lat = parseFloat(values[0]);
+        const lng = parseFloat(values[1]);
+        const zoom = parseInt(values[2]);
+        const intensity = parseInt(values[3]);
+        map.setView([lat, lng], zoom);
+        slider.value = intensity;
+        loadHeatmapData(intensity);
+    };
 </script>
 </body>
 </html>
