@@ -95,6 +95,7 @@
         cfg.radius = calcRadiusInDegrees(currPosition, true) * 7;
         console.debug('Radius: ' + cfg.radius);
         heatmapLayer.cfg.radius = cfg.radius;
+        window.location.hash = [currPosition.lat, currPosition.lng, map.getZoom(), slider.value].join(",");
     });
 
     // Function for setting heatmap data
@@ -116,6 +117,7 @@
             setTimeout(() => {
                 isThrottled = false;
                 setHeatmapData(lastKnownValue);
+                window.location.hash = [map.getCenter().lat, map.getCenter().lng, map.getZoom(), lastKnownValue].join(",");
             }, 75); // Delay in ms
         }
     }
@@ -128,6 +130,20 @@
                 // TODO: Check the math so we can explain what the slider means.
                 data: data.map(item => ({la: item[0], ln: item[1], v: item[2]}))
             };
+
+            if(window.location.hash !== "") {
+                // Incoming link had settings.  Use them.
+                const values = window.location.hash.substring(1).split(",");
+                const lat = parseFloat(values[0]);
+                const lng = parseFloat(values[1]);
+                const zoom = parseInt(values[2]);
+                const intensity = parseInt(values[3]);
+                map.setView([lat, lng], zoom);
+                slider.value = intensity;
+                setHeatmapData(intensity);
+            }else{
+                setHeatmapData(slider.value);
+            }
 
             setHeatmapData(slider.value);
             heatmapLayer.addTo(map);
