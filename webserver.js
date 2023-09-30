@@ -24,9 +24,9 @@ const server = http.createServer((req, res) => {
             contentType = 'text/plain';
     }
 
-    if(pathname === '/listflightpaths') {
-        fs.readdir(path.join(__dirname, 'flightpaths'), (err, files) => {
-            res.writeHead(200, { 'Content-Type': 'application/json' });
+    if (pathname === '/listflightpaths') {
+        fs.readdir(path.join(__dirname, 'data/flightpaths'), (err, files) => {
+            res.writeHead(200, {'Content-Type': 'application/json'});
             res.end(JSON.stringify(files));
         });
     } else {
@@ -36,7 +36,7 @@ const server = http.createServer((req, res) => {
                 res.writeHead(404);
                 res.end('Not found');
             } else {
-                res.writeHead(200, { 'Content-Type': contentType });
+                res.writeHead(200, {'Content-Type': contentType});
                 res.end(data);
             }
         });

@@ -100,7 +100,7 @@ if (isMainThread) {
 
             for (const city in flightPaths) {
                 radii.forEach(radius => {
-                    const outFile = `./flightpaths/${city}_${radius}_miles.json`;
+                    const outFile = `./data/flightpaths/${city}_${radius}_miles.json`;
                     fs.writeFileSync(outFile, JSON.stringify({
                         type: 'FeatureCollection',
                         features: Object.values(flightPaths[city][radius]),

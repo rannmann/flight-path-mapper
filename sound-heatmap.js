@@ -10,7 +10,7 @@ const os = require("os");
 const GENERATOR_COORDINATES = {
     'USA_WA_Seattle': {lat: 47.6062, lon: -122.3321},
 };
-const RADIUS_IN_MILES = 100;
+const RADIUS_IN_MILES = 200;
 
 if (isMainThread) {
     // Main thread
@@ -61,7 +61,7 @@ if (isMainThread) {
 
         try {
             // Write grid to file
-            fs.writeFile('heatmap-grid.json', JSON.stringify(aircraft.convertGridBackToDegrees(grid)), (err) => {
+            fs.writeFile('data/heatmaps/heatmap-grid.json', JSON.stringify(aircraft.convertGridBackToDegrees(grid)), (err) => {
                 if (err) {
                     console.error(err);
                 } else {

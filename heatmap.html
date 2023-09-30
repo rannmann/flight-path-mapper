@@ -41,7 +41,7 @@
 </head>
 <body>
 <div id="slider-container">
-    <label for="slider">Heatmap Intensity</label>
+    <label for="slider">Max Sound Intensity</label>
     <input type="range" min="1" max="1000" value="300" id="slider">
 </div>
 <div id="mapid"></div>
@@ -63,7 +63,7 @@
 
     const heatmapCfg = {
         "radius": .02,
-        "maxOpacity": .4,
+        "maxOpacity": .3,
         "blur": 1,
         "scaleRadius": true,
         latField: 'la',
@@ -114,7 +114,7 @@
     }
 
     // Fetching heatmap data from store and applying the settings
-    fetch('heatmap-grid.json')
+    fetch('data/heatmaps/heatmap-grid.json')
         .then(response => response.json())
         .then(data => {
             datapoints = {
