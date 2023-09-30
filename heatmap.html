@@ -19,12 +19,29 @@
             top: 10px;
             right: 10px;
             z-index: 999;
+            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white background */
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        #slider-container label {
+            font-family: sans-serif;
+            display: block;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        #slider {
+            display: block;
+            width: 100%; /* Taking full width of the container */
         }
     </style>
 
 </head>
 <body>
 <div id="slider-container">
+    <label for="slider">Heatmap Intensity</label>
     <input type="range" min="1" max="1000" value="300" id="slider">
 </div>
 <div id="mapid"></div>
@@ -70,12 +87,12 @@
         return rDeg;
     };
 
-    map.on("moveend", function() {
+    map.on("moveend", function () {
         const currPosition = map.getCenter();
         console.debug(currPosition);
         // Multiply the radius so the data points blend together more smoothly.  Otherwise, we get
-        // 1km dots everywhere.
-        cfg.radius = calcRadiusInDegrees(currPosition, true) * 6;
+        // 1km dots everywhere.  Since we have 1.0 blurring, everything needs to be a bit larger.
+        cfg.radius = calcRadiusInDegrees(currPosition, true) * 7;
         console.debug('Radius: ' + cfg.radius);
         heatmapLayer.cfg.radius = cfg.radius;
     });
@@ -90,7 +107,7 @@
     // Debounce so we don't destroy GPUs as we slide through hundreds of values
     let isThrottled = false;
     let lastKnownValue = 0;
-    slider.oninput = function() {
+    slider.oninput = function () {
         lastKnownValue = this.value;
 
         if (!isThrottled) {
@@ -99,7 +116,7 @@
             setTimeout(() => {
                 isThrottled = false;
                 setHeatmapData(lastKnownValue);
-            }, 50); // Delay in ms
+            }, 75); // Delay in ms
         }
     }
 
