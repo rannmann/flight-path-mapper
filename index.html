@@ -1,112 +1,445 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Flight Paths Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Path Mapper</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         html, body {
             height: 100%;
-            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-        #mapid {
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        select, button {
+            padding: 0.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        select {
+            min-width: 200px;
+            background: white;
+            border: 1px solid #ddd;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #2980b9;
+        }
+
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            color: #f39c12;
+        }
+
+        #mapContainer {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
             height: 100%;
             width: 100%;
+        }
+
+        .map-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .map-overlay h3 {
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .map-overlay p {
+            margin: 0.25rem 0;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-online { background: #27ae60; }
+        .status-offline { background: #e74c3c; }
+        .status-loading { background: #f39c12; }
+
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 0.75rem;
+            }
+
+            .header h1 {
+                font-size: 1.25rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.5rem;
+            }
+
+            .control-group {
+                justify-content: space-between;
+            }
+
+            select {
+                min-width: auto;
+                flex: 1;
+            }
+
+            .map-overlay {
+                position: relative;
+                top: 0;
+                left: 0;
+                margin: 10px;
+                max-width: none;
+            }
         }
     </style>
 </head>
 <body>
-<div id="mapid"></div>
+    <div id="app">
+        <header class="header">
+            <h1><i class="fas fa-plane"></i> Flight Path Mapper</h1>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="citySelect">City:</label>
+                    <select id="citySelect">
+                        <option value="">Select a city...</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button id="refreshBtn" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button id="clearBtn" onclick="clearMap()">
+                        <i class="fas fa-eraser"></i> Clear
+                    </button>
+                </div>
+                <div class="control-group">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="statusText">Connecting...</span>
+                </div>
+            </div>
+        </header>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-    let map = L.map('mapid').setView([47.6097, -122.3331], 7);
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-    }).addTo(map);
+        <div id="mapContainer">
+            <div id="map"></div>
+            <div class="map-overlay" id="infoPanel" style="display: none;">
+                <h3>Flight Path Info</h3>
+                <p id="pathInfo"></p>
+                <p id="flightCount"></p>
+                <p id="dataDate"></p>
+            </div>
+        </div>
+    </div>
 
-    // Variable to hold the geoJSON layer
-    let geoLayer;
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        class FlightPathMapper {
+            constructor() {
+                this.map = null;
+                this.geoLayer = null;
+                this.config = null;
+                this.status = 'loading';
+                this.init();
+            }
 
-    function loadData(filename) {
-        if(geoLayer) {
-            // If there is an existing geoJSON layer, remove it before adding a new one
-            map.removeLayer(geoLayer);
+            async init() {
+                this.initMap();
+                await this.loadConfig();
+                await this.refreshData();
+                this.updateStatus();
+            }
+
+            initMap() {
+                this.map = L.map('map').setView([39.8283, -98.5795], 4); // Center of USA
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(this.map);
+
+                // Add click handler to hide info panel
+                this.map.on('click', () => {
+                    document.getElementById('infoPanel').style.display = 'none';
+                });
+            }
+
+            async loadConfig() {
+                try {
+                    const response = await fetch('/api/config');
+                    this.config = await response.json();
+                } catch (error) {
+                    console.warn('Could not load config from server, using defaults');
+                    this.config = { cities: [], defaultRadii: [20], defaultDate: '2023-09-01' };
+                }
+            }
+
+            async refreshData() {
+                this.setStatus('loading', 'Loading flight paths...');
+                
+                try {
+                    const response = await fetch('/listflightpaths');
+                    const files = await response.json();
+                    this.populateDropdown(files);
+                    this.setStatus('online', `${files.length} flight paths available`);
+                } catch (error) {
+                    console.error('Failed to load flight paths:', error);
+                    this.populateDropdown(this.getFallbackFiles());
+                    this.setStatus('offline', 'Using cached data (server offline)');
+                }
+            }
+
+            populateDropdown(files) {
+                const select = document.getElementById('citySelect');
+                select.innerHTML = '<option value="">Select a city...</option>';
+                
+                // Group files by city
+                const groupedFiles = {};
+                files.forEach(file => {
+                    const parts = file.replace('.json', '').split('_');
+                    const city = parts.slice(0, -2).join('_');
+                    const radius = parts[parts.length - 2];
+                    
+                    if (!groupedFiles[city]) {
+                        groupedFiles[city] = [];
+                    }
+                    groupedFiles[city].push({ file, radius });
+                });
+
+                // Add options
+                Object.entries(groupedFiles).forEach(([city, variants]) => {
+                    variants.sort((a, b) => parseInt(a.radius) - parseInt(b.radius));
+                    variants.forEach(variant => {
+                        const option = document.createElement('option');
+                        option.value = variant.file;
+                        option.textContent = `${city.replace(/_/g, ' ')} (${variant.radius} miles)`;
+                        select.appendChild(option);
+                    });
+                });
+
+                select.onchange = (e) => {
+                    if (e.target.value) {
+                        this.loadFlightPath(e.target.value);
+                    }
+                };
+            }
+
+            async loadFlightPath(filename) {
+                if (this.geoLayer) {
+                    this.map.removeLayer(this.geoLayer);
+                    this.geoLayer = null;
+                }
+
+                this.setStatus('loading', 'Loading flight data...');
+                
+                try {
+                    const baseUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}flightpaths/`;
+                    const response = await fetch(baseUrl + filename);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Create layer with better styling
+                    this.geoLayer = L.geoJSON(data, {
+                        style: {
+                            color: '#3498db',
+                            weight: 1.5,
+                            opacity: 0.7
+                        },
+                        onEachFeature: (feature, layer) => {
+                            if (feature.properties) {
+                                layer.bindPopup(`
+                                    <strong>Flight:</strong> ${feature.properties.callsign || 'Unknown'}<br>
+                                    <strong>Aircraft:</strong> ${feature.properties.type || 'Unknown'}<br>
+                                    <strong>Altitude:</strong> ${feature.properties.alt_baro || 'Unknown'} ft
+                                `);
+                            }
+                        }
+                    }).addTo(this.map);
+
+                    // Fit map to bounds
+                    this.map.fitBounds(this.geoLayer.getBounds(), { padding: [20, 20] });
+                    
+                    // Show info panel
+                    this.showInfoPanel(filename, data);
+                    
+                    this.setStatus('online', 'Flight path loaded successfully');
+                } catch (error) {
+                    console.error('Failed to load flight path:', error);
+                    this.showError(`Failed to load flight path: ${error.message}`);
+                    this.setStatus('offline', 'Failed to load flight data');
+                }
+            }
+
+            showInfoPanel(filename, data) {
+                const infoPanel = document.getElementById('infoPanel');
+                const pathInfo = document.getElementById('pathInfo');
+                const flightCount = document.getElementById('flightCount');
+                const dataDate = document.getElementById('dataDate');
+
+                const parts = filename.replace('.json', '').split('_');
+                const city = parts.slice(0, -2).join(' ').replace(/_/g, ' ');
+                const radius = parts[parts.length - 2];
+
+                pathInfo.textContent = `${city} (${radius} miles radius)`;
+                flightCount.textContent = `${data.features ? data.features.length : 0} flight paths`;
+                dataDate.textContent = `Data from: ${this.config?.defaultDate || '2023-09-01'}`;
+
+                infoPanel.style.display = 'block';
+            }
+
+            clearMap() {
+                if (this.geoLayer) {
+                    this.map.removeLayer(this.geoLayer);
+                    this.geoLayer = null;
+                }
+                document.getElementById('citySelect').value = '';
+                document.getElementById('infoPanel').style.display = 'none';
+                this.setStatus('online', `${document.getElementById('citySelect').options.length - 1} flight paths available`);
+            }
+
+            setStatus(status, message) {
+                this.status = status;
+                const indicator = document.getElementById('statusIndicator');
+                const text = document.getElementById('statusText');
+                
+                indicator.className = `status-indicator status-${status}`;
+                text.textContent = message;
+            }
+
+            showError(message) {
+                const errorDiv = document.getElementById('errorMessage');
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 5000);
+            }
+
+            getFallbackFiles() {
+                return [
+                    'GBR_London_20_miles.json',
+                    'USA_CA_LosAngeles_20_miles.json',
+                    'USA_IL_Chicago_20_miles.json',
+                    'USA_WA_Seattle_20_miles.json'
+                ];
+            }
+
+            updateStatus() {
+                // Periodically check server status
+                setInterval(async () => {
+                    try {
+                        const response = await fetch('/api/status');
+                        const status = await response.json();
+                        if (this.status !== 'loading') {
+                            this.setStatus('online', `${status.flightPathsCount} flight paths available`);
+                        }
+                    } catch (error) {
+                        if (this.status !== 'loading') {
+                            this.setStatus('offline', 'Server offline');
+                        }
+                    }
+                }, 30000); // Check every 30 seconds
+            }
         }
-        const baseUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "flightpaths/";
-        fetch(baseUrl + filename)
-            .then(response => response.json())
-            .then(data => {
-                geoLayer = L.geoJSON(data, {
-                    color: 'blue',
-                    weight: 1,
-                }).addTo(map);
-            });
-    }
 
-    // Populate the selector options with flightpath filenames
-    fetch('/listflightpaths')
-        .then(response => response.json())
-        .then(files => createDropdown(files))
-        // static fallback for when the node server is not running to provide a list of files.
-        .catch(() => createDropdown([
-            'CAN_Calgary_60_miles.json',
-            'CAN_Montreal_60_miles.json',
-            'CAN_Toronto_60_miles.json',
-            'CAN_Vancouver_60_miles.json',
-            'DNK_Copenhagen_60_miles.json',
-            'FIN_Helsinki_60_miles.json',
-            'FRA_Paris_60_miles.json',
-            'GBR_Edinburgh_60_miles.json',
-            'GBR_London_60_miles.json',
-            'GBR_Manchester_60_miles.json',
-            'HKG_HongKong_60_miles.json',
-            'JPN_Tokyo_60_miles.json',
-            'KOR_Seoul_60_miles.json',
-            'MEX_MexicoCity_60_miles.json',
-            'NLD_Amsterdam_60_miles.json',
-            'NOR_Oslo_60_miles.json',
-            'NZL_Auckland_60_miles.json',
-            'NZL_Christchurch_60_miles.json',
-            'RUS_Moscow_60_miles.json',
-            'SWE_Stockholm_60_miles.json',
-            'THA_Bangkok_60_miles.json',
-            'USA_AK_Anchorage_60_miles.json',
-            'USA_AK_Anchorage_150_miles.json',
-            'USA_AZ_Phoenix_20_miles.json',
-            'USA_CA_LosAngeles_20_miles.json',
-            'USA_CO_Denver_20_miles.json',
-            'USA_FL_Miami_20_miles.json',
-            'USA_GA_Atlanta_20_miles.json',
-            'USA_HI_Honolulu_60_miles.json',
-            'USA_IL_Chicago_20_miles.json',
-            'USA_MA_Boston_20_miles.json',
-            'USA_MD_Baltimore_20_miles.json',
-            'USA_OR_Portland_60_miles.json',
-            'USA_TX_Houston_60_miles.json',
-            'USA_UT_SaltLakeCity_60_miles.json',
-            'USA_WA_Bellingham_60_miles.json',
-            'USA_WA_Port_Angeles_60_miles.json',
-            'USA_WA_Seattle_10_miles.json',
-            'USA_WA_Seattle_60_miles.json',
-            'USA_WA_Spokane_60_miles.json',
-            'USA_WA_Vancouver_60_miles.json',
-            'USA_WI_Milwaukee_60_miles.json',
-            'USA_WY_Cheyenne_60_miles.json',
-        ]))
+        // Global functions for buttons
+        function refreshData() {
+            window.flightMapper.refreshData();
+        }
 
-    function createDropdown(files){
-        const select = L.control({position: 'topright'});
-        select.onAdd = function () {
-            const div = L.DomUtil.create('div');
-            let select_html = '<select id="flightpaths-select" onchange="loadData(this.value)"><option>Select a flight path</option>';
-            files.forEach(file => { select_html += `<option value="${file}">${file}</option>`; });
-            select_html += '</select>';
-            div.innerHTML = select_html;
-            return div;
-        };
-        select.addTo(map);
-    }
-</script>
+        function clearMap() {
+            window.flightMapper.clearMap();
+        }
+
+        // Initialize the application
+        window.addEventListener('load', () => {
+            window.flightMapper = new FlightPathMapper();
+        });
+    </script>
 </body>
 </html>

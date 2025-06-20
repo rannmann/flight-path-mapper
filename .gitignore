@@ -131,3 +131,4 @@ dist
 
 # generated flightpaths
 flightpaths/*
+flight-history/*
