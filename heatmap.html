@@ -1,12 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Flight Paths Noise Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Path Noise Heatmap</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         html, body {
             height: 100%;
-            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        select, button, input[type="range"] {
+            padding: 0.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        select {
+            min-width: 200px;
+            background: white;
+            border: 1px solid #ddd;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #2980b9;
+        }
+
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            color: #f39c12;
+        }
+
+        input[type="range"] {
+            background: white;
+            border: 1px solid #ddd;
+            min-width: 150px;
+        }
+
+        #mapContainer {
+            flex: 1;
+            position: relative;
         }
 
         #mapid {
@@ -14,45 +104,130 @@
             width: 100%;
         }
 
-        #slider-container {
+        .map-overlay {
             position: absolute;
             top: 10px;
-            right: 10px;
-            z-index: 999;
-            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white background */
-            padding: 10px;
-            border-radius: 5px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-width: 300px;
         }
 
-        #slider-container label {
-            font-family: sans-serif;
-            display: block;
-            font-weight: bold;
+        .map-overlay h3 {
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .map-overlay p {
+            margin: 0.25rem 0;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-online { background: #27ae60; }
+        .status-offline { background: #e74c3c; }
+        .status-loading { background: #f39c12; }
+
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 1rem;
             text-align: center;
-            margin-bottom: 5px;
         }
 
-        #slider {
-            display: block;
-            width: 100%; /* Taking full width of the container */
+        @media (max-width: 768px) {
+            .header {
+                padding: 0.75rem;
+            }
+
+            .header h1 {
+                font-size: 1.25rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.5rem;
+            }
+
+            .control-group {
+                justify-content: space-between;
+            }
+
+            select {
+                min-width: auto;
+                flex: 1;
+            }
+
+            .map-overlay {
+                position: relative;
+                top: 0;
+                left: 0;
+                margin: 10px;
+                max-width: none;
+            }
         }
     </style>
-
 </head>
 <body>
-<div id="slider-container">
-    <label for="slider">Max Sound Intensity</label>
-    <input type="range" min="1" max="1000" value="300" id="slider">
-</div>
-<div id="mapid"></div>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <div id="app">
+        <header class="header">
+            <h1><i class="fas fa-fire"></i> Flight Path Noise Heatmap</h1>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="citySelect">City:</label>
+                    <select id="citySelect">
+                        <option value="">Select a city...</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="slider">Max Sound Intensity:</label>
+                    <input type="range" min="1" max="1000" value="300" id="slider">
+                    <span id="sliderValue">300</span>
+                </div>
+                <div class="control-group">
+                    <button id="refreshBtn" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="control-group">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="statusText">Loading...</span>
+                </div>
+            </div>
+        </header>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+        <div id="mapContainer">
+            <div id="mapid"></div>
+            <div class="map-overlay" id="infoPanel" style="display: none;">
+                <h3>Heatmap Info</h3>
+                <p id="cityInfo"></p>
+                <p id="dataPoints"></p>
+                <p id="dataDate"></p>
+                <p id="generationInfo"></p>
+            </div>
+        </div>
+    </div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.2/heatmap.min.js"></script>
 <script src="https://cdn.rawgit.com/pa7/heatmap.js/develop/plugins/leaflet-heatmap/leaflet-heatmap.js"></script>
 
 <script>
     // Variables and configurations
-    // Setting the view to Seattle by default, but this will be overridden if we have incoming settings via hash.
-    let map = L.map('mapid').setView([47.6097, -122.3331], 9);
+    let map = L.map('mapid').setView([39.8283, -98.5795], 4); // Center of USA
     let slider = document.getElementById('slider');
     let datapoints = {};
 
@@ -90,53 +265,236 @@
     });
 
     // Load heatmap data on UI
-    const loadHeatmapData = (maxValue) => {
-        datapoints.max = maxValue;
-        heatmapLayer.setData(datapoints);
+    const loadHeatmapDataToMap = (maxValue) => {
+        if (!currentHeatmapData) return;
+        
+        const dataWithMax = {
+            ...currentHeatmapData,
+            max: maxValue
+        };
+        heatmapLayer.setData(dataWithMax);
     };
+    
+    // Update slider value display
+    function updateSliderValue() {
+        const sliderValueSpan = document.getElementById('sliderValue');
+        sliderValueSpan.textContent = slider.value;
+    }
 
     // Adding a slider with a delay time of 75ms to prevent overlapping calls
     let isThrottled = false;
     let lastKnownValue = 0;
     slider.oninput = function () {
         lastKnownValue = this.value;
+        updateSliderValue();
 
         if (!isThrottled) {
             isThrottled = true;
 
             setTimeout(() => {
                 isThrottled = false;
-                loadHeatmapData(lastKnownValue);
+                loadHeatmapDataToMap(lastKnownValue);
                 // persisting state in url
                 window.location.hash = [map.getCenter().lat, map.getCenter().lng, map.getZoom(), lastKnownValue].join(",");
             }, 75); // Delay in ms
         }
     }
+    
+    // Status management
+    function setStatus(status, message) {
+        const indicator = document.getElementById('statusIndicator');
+        const text = document.getElementById('statusText');
+        
+        indicator.className = `status-indicator status-${status}`;
+        text.textContent = message;
+    }
 
-    // Fetching heatmap data from store and applying the settings
-    fetch('data/heatmaps/heatmap-grid.json')
-        .then(response => response.json())
-        .then(data => {
-            datapoints = {
+    // Error display
+    function showError(message) {
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 5000);
+    }
+    
+    // Refresh data
+    function refreshData() {
+        location.reload();
+    }
+
+    // Application state
+    let currentHeatmapData = null;
+    let metadata = null;
+    let availableHeatmaps = [];
+
+    // Initialize the application
+    async function init() {
+        await loadMetadata();
+        await loadAvailableHeatmaps();
+        updateSliderValue();
+        
+        // Check if we have incoming settings. If we do, use them.
+        if (window.location.hash !== "") {
+            const values = window.location.hash.substring(1).split(",");
+            loadMapWithHashSettings(values);
+        }
+    }
+
+    // Load metadata
+    async function loadMetadata() {
+        try {
+            const response = await fetch('data/heatmaps/metadata.json');
+            metadata = await response.json();
+            setStatus('online', 'Metadata loaded');
+        } catch (error) {
+            console.warn('Could not load metadata:', error);
+            setStatus('offline', 'No metadata available');
+        }
+    }
+
+    // Load available heatmap files
+    async function loadAvailableHeatmaps() {
+        try {
+            // Check what heatmap files exist
+            const files = [];
+            
+            if (metadata && metadata.cities) {
+                for (const city of metadata.cities) {
+                    try {
+                        const response = await fetch(`data/heatmaps/${city}_heatmap.json`, { method: 'HEAD' });
+                        if (response.ok) {
+                            files.push(`${city}_heatmap.json`);
+                        }
+                    } catch (e) {
+                        // File doesn't exist, skip
+                    }
+                }
+            }
+            
+            // Also check for the legacy file
+            try {
+                const response = await fetch('data/heatmaps/heatmap-grid.json', { method: 'HEAD' });
+                if (response.ok) {
+                    files.push('heatmap-grid.json');
+                }
+            } catch (e) {
+                // File doesn't exist, skip
+            }
+            
+            availableHeatmaps = files;
+            populateDropdown(files);
+            setStatus('online', `${files.length} heatmaps available`);
+        } catch (error) {
+            console.error('Failed to load available heatmaps:', error);
+            setStatus('offline', 'Failed to load heatmaps');
+        }
+    }
+
+    // Populate the dropdown with available heatmaps
+    function populateDropdown(files) {
+        const select = document.getElementById('citySelect');
+        select.innerHTML = '<option value="">Select a city...</option>';
+        
+        files.forEach(file => {
+            const option = document.createElement('option');
+            option.value = file;
+            
+            if (file === 'heatmap-grid.json') {
+                option.textContent = 'Seattle (Legacy)';
+            } else {
+                const cityName = file.replace('_heatmap.json', '').replace(/_/g, ' ');
+                option.textContent = cityName;
+            }
+            
+            select.appendChild(option);
+        });
+
+        select.onchange = (e) => {
+            if (e.target.value) {
+                loadHeatmapData(e.target.value);
+            }
+        };
+    }
+
+    // Load specific heatmap data
+    async function loadHeatmapData(filename) {
+        setStatus('loading', 'Loading heatmap data...');
+        
+        try {
+            const response = await fetch(`data/heatmaps/${filename}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            currentHeatmapData = {
                 data: data.map(item => ({la: item[0], ln: item[1], v: item[2]}))
             };
 
-            console.log(`Loaded ${data.length} heatmap data points`);
-
-            // Check if we have incoming settings. If we do, use them.
-            if (window.location.hash !== "") {
-                const values = window.location.hash.substring(1).split(",");
-                loadMapWithHashSettings(values);
-            } else {
-                loadHeatmapData(slider.value);
+            console.log(`Loaded ${data.length} heatmap data points from ${filename}`);
+            
+            // Apply current slider value
+            loadHeatmapDataToMap(slider.value);
+            
+            // Add heatmap layer to map
+            if (!map.hasLayer(heatmapLayer)) {
+                heatmapLayer.addTo(map);
             }
-
-            heatmapLayer.addTo(map);
-        })
-        .catch(error => {
+            
+            // Show info panel and center map
+            showInfoPanel(filename, data);
+            centerMapOnData(data);
+            
+            setStatus('online', `Loaded ${data.length} data points`);
+        } catch (error) {
             console.error('Failed to load heatmap data:', error);
-            alert('Failed to load heatmap data. Please ensure the data has been generated.');
-        });
+            showError(`Failed to load heatmap data: ${error.message}`);
+            setStatus('offline', 'Failed to load heatmap data');
+        }
+    }
+    
+    // Center map on heatmap data
+    function centerMapOnData(data) {
+        if (data.length === 0) return;
+        
+        const lats = data.map(item => item[0]);
+        const lngs = data.map(item => item[1]);
+        
+        const bounds = [
+            [Math.min(...lats), Math.min(...lngs)],
+            [Math.max(...lats), Math.max(...lngs)]
+        ];
+        
+        map.fitBounds(bounds, { padding: [20, 20] });
+    }
+    
+    // Show info panel
+    function showInfoPanel(filename, data) {
+        const infoPanel = document.getElementById('infoPanel');
+        const cityInfo = document.getElementById('cityInfo');
+        const dataPoints = document.getElementById('dataPoints');
+        const dataDate = document.getElementById('dataDate');
+        const generationInfo = document.getElementById('generationInfo');
+
+        let cityName;
+        if (filename === 'heatmap-grid.json') {
+            cityName = 'Seattle (Legacy)';
+        } else {
+            cityName = filename.replace('_heatmap.json', '').replace(/_/g, ' ');
+        }
+
+        cityInfo.textContent = cityName;
+        dataPoints.textContent = `${data.length} data points`;
+        
+        if (metadata) {
+            dataDate.textContent = `Data from: ${metadata.dataDate}`;
+            generationInfo.textContent = `${metadata.gridSystemType} • ${metadata.algorithm}`;
+        }
+
+        infoPanel.style.display = 'block';
+    }
 
     // Helper function to load map with hash settings.
     const loadMapWithHashSettings = (values) => {
@@ -146,8 +504,12 @@
         const intensity = parseInt(values[3]);
         map.setView([lat, lng], zoom);
         slider.value = intensity;
-        loadHeatmapData(intensity);
+        updateSliderValue();
+        loadHeatmapDataToMap(intensity);
     };
+    
+    // Initialize when page loads
+    window.addEventListener('load', init);
 </script>
 </body>
 </html>
