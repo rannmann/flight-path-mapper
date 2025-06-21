@@ -38,10 +38,15 @@ const server = http.createServer((req, res) => {
         // API endpoints
         if (pathname === '/listflightpaths') {
             handleFlightPathsList(res);
+        } else if (pathname === '/listheatmaps') {
+            handleHeatmapsList(res);
         } else if (pathname === '/api/config') {
             handleConfigEndpoint(res);
         } else if (pathname === '/api/status') {
             handleStatusEndpoint(res);
+        } else if (pathname.startsWith('/data/')) {
+            // Serve data files (heatmaps, etc.)
+            handleDataFile(pathname, contentType, res);
         } else {
             // Static file serving
             handleStaticFile(pathname, contentType, res);
@@ -72,6 +77,25 @@ function handleFlightPathsList(res) {
     });
 }
 
+function handleHeatmapsList(res) {
+    const heatmapsDir = path.join(__dirname, 'data', 'heatmaps');
+    
+    fs.readdir(heatmapsDir, (err, files) => {
+        if (err) {
+            logger.warn('Failed to read heatmaps directory', { error: err.message });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify([]));
+            return;
+        }
+        
+        // Filter only heatmap JSON files (not metadata)
+        const heatmapFiles = files.filter(file => file.endsWith('_heatmap.json'));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(heatmapFiles));
+        logger.debug('Listed heatmaps', { count: heatmapFiles.length });
+    });
+}
+
 function handleConfigEndpoint(res) {
     const clientConfig = {
         cities: Object.keys(config.cities),
@@ -88,7 +112,8 @@ function handleStatusEndpoint(res) {
         server: 'running',
         timestamp: new Date().toISOString(),
         flightPathsCount: 0,
-        dataDirectoryExists: fs.existsSync(path.join(__dirname, config.paths.flightHistory))
+        dataDirectoryExists: fs.existsSync(path.join(__dirname, config.paths.flightHistory)),
+        heatmapDataExists: fs.existsSync(path.join(__dirname, 'data', 'heatmaps', 'heatmap-grid.json'))
     };
 
     // Count flight path files
@@ -99,8 +124,44 @@ function handleStatusEndpoint(res) {
         status.flightPathsCount = 0;
     }
 
+    // Get heatmap metadata if available
+    try {
+        const metadataPath = path.join(__dirname, 'data', 'heatmaps', 'metadata.json');
+        if (fs.existsSync(metadataPath)) {
+            status.heatmapMetadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+        }
+    } catch (err) {
+        // Ignore metadata errors
+    }
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(status));
+}
+
+function handleDataFile(pathname, contentType, res) {
+    const filePath = path.join(__dirname, pathname);
+    
+    // Security: ensure the path is within the data directory
+    const dataDir = path.join(__dirname, 'data');
+    const resolvedPath = path.resolve(filePath);
+    if (!resolvedPath.startsWith(dataDir)) {
+        logger.warn('Attempted access outside data directory', { pathname, resolvedPath });
+        res.writeHead(403, { 'Content-Type': 'text/plain' });
+        res.end('Access denied');
+        return;
+    }
+    
+    fs.readFile(filePath, (err, data) => {
+        if (err) {
+            logger.warn('Data file not found', { path: pathname });
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Data file not found' }));
+        } else {
+            res.writeHead(200, { 'Content-Type': contentType });
+            res.end(data);
+            logger.debug('Served data file', { path: pathname, size: data.length });
+        }
+    });
 }
 
 function handleStaticFile(pathname, contentType, res) {

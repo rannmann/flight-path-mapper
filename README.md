@@ -203,7 +203,12 @@ nodemon webserver.js
 - **Data Size**: Requires significant disk space (~16GB+ for full dataset)
 - **Processing Time**: Full data processing takes 15+ minutes
 - **Single Date**: Currently configured for September 1, 2023 data
-- **Noise Modeling**: Heatmap feature is work in progress
+
+## Data Quality Features
+
+- **Automatic Corruption Detection**: The system automatically detects and removes corrupt flight data files during processing
+- **Error Recovery**: Processing continues even when encountering bad files, ensuring robust operation
+- **Cleanup Logging**: All file deletions are logged for transparency and debugging
 
 ## Contributing
 

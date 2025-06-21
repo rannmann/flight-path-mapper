@@ -165,35 +165,75 @@ if (isMainThread) {
     });
 
     stream.on('end', () => {
-        // Process file for each radius
-        radii.forEach(radius => {
-            const data = JSON.parse(dataString);
+        try {
+            // Process file for each radius
+            radii.forEach(radius => {
+                const data = JSON.parse(dataString);
 
-            data.aircraft.forEach(plane => {
-                let cityRadius = isWithinRadius(plane.lat, plane.lon, radius);
+                if (data.aircraft && Array.isArray(data.aircraft)) {
+                    data.aircraft.forEach(plane => {
+                        if (plane.lat && plane.lon) {
+                            let cityRadius = isWithinRadius(plane.lat, plane.lon, radius);
 
-                for (const city in cityRadius) {
-                    if (cityRadius[city]) {
-                        if (!flightPaths[city]) flightPaths[city] = {};
-                        if (!flightPaths[city][radius]) flightPaths[city][radius] = {};
-                        if (!flightPaths[city][radius][plane.hex]) {
-                            flightPaths[city][radius][plane.hex] = {
-                                type: 'Feature',
-                                geometry: { type: 'LineString', coordinates: [] }
-                            };
+                            for (const city in cityRadius) {
+                                if (cityRadius[city]) {
+                                    if (!flightPaths[city]) flightPaths[city] = {};
+                                    if (!flightPaths[city][radius]) flightPaths[city][radius] = {};
+                                    if (!flightPaths[city][radius][plane.hex]) {
+                                        flightPaths[city][radius][plane.hex] = {
+                                            type: 'Feature',
+                                            geometry: { type: 'LineString', coordinates: [] }
+                                        };
+                                    }
+
+                                    flightPaths[city][radius][plane.hex].geometry.coordinates.push([plane.lon, plane.lat]);
+                                }
+                            }
                         }
-
-                        flightPaths[city][radius][plane.hex].geometry.coordinates.push([plane.lon, plane.lat]);
-                    }
+                    });
                 }
             });
-        });
 
-        parentPort.postMessage(flightPaths);
+            parentPort.postMessage(flightPaths);
+        } catch (error) {
+            console.error(`Worker JSON parsing error for ${file}:`, error);
+            
+            // Check if it's a JSON parsing error indicating corruption
+            if (error.message.includes('Unexpected end of JSON input') || 
+                error.message.includes('Unexpected token') ||
+                error.name === 'SyntaxError') {
+                console.log(`Deleting file with corrupt JSON: ${file}`);
+                try {
+                    const fs = require('fs');
+                    fs.unlinkSync(file);
+                    console.log(`Successfully deleted corrupt JSON file: ${file}`);
+                } catch (deleteError) {
+                    console.error(`Failed to delete corrupt JSON file ${file}:`, deleteError.message);
+                }
+            }
+            
+            // Send empty result
+            parentPort.postMessage({});
+        }
     });
 
     stream.on('error', err => {
-        throw err;
+        console.error(`Worker stream error for ${file}:`, err);
+        
+        // Check if it's a corrupt file error
+        if (err.code === 'Z_BUF_ERROR' || err.code === 'Z_DATA_ERROR' || err.message.includes('unexpected end of file')) {
+            console.log(`Deleting corrupt file: ${file}`);
+            try {
+                const fs = require('fs');
+                fs.unlinkSync(file);
+                console.log(`Successfully deleted corrupt file: ${file}`);
+            } catch (deleteError) {
+                console.error(`Failed to delete corrupt file ${file}:`, deleteError.message);
+            }
+        }
+        
+        // Send empty result instead of throwing
+        parentPort.postMessage({});
     });
 }
 
