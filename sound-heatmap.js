@@ -73,30 +73,30 @@ if (isMainThread) {
         });
 
         logger.info('All workers complete, processing results for all cities...');
-        
+
         const allWorkerResults = workerDataList;
-        
+
         // Process each configured city
         for (const [cityKey, cityCoords] of Object.entries(config.cities)) {
             logger.info(`Aggregating grid data for ${cityKey}...`);
-            
+
             const aircraft = new Aircraft(cityCoords.lat, cityCoords.lon);
             let grid = {};
 
             // Process worker results in batches to manage memory
             const batchSize = 2000; // Process 2000 worker results at a time
-            
+
             for (let i = 0; i < allWorkerResults.length; i += batchSize) {
                 const batch = allWorkerResults.slice(i, i + batchSize);
-                
+
                 logger.info(`Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(allWorkerResults.length/batchSize)} for ${cityKey}`);
-                
+
                 // The grid being returned is only for 1 file.
                 // We need to add all the grids together to get the final grid.
                 batch.forEach((workerData, batchIndex) => {
                     // Each worker returns results for all cities, get this city's grid
                     const workerGrid = workerData[cityKey] || {};
-                    
+
                     for (let key in workerGrid) {
                         if (grid[key]) {
                             // Combining the total loudness
@@ -109,7 +109,7 @@ if (isMainThread) {
                         }
                     }
                 });
-                
+
                 // Force garbage collection if available
                 if (global.gc && i > 0 && i % (batchSize * 2) === 0) {
                     global.gc();
@@ -128,7 +128,7 @@ if (isMainThread) {
 
                 // Convert grid to degrees and save
                 let heatmapData = aircraft.convertGridBackToDegrees(grid);
-                
+
                 // Sort by intensity and limit for web performance
                 heatmapData.sort((a, b) => b[2] - a[2]);
                 const maxPoints = TEST_MODE ? 5000 : 50000; // Limit points for web performance
@@ -145,46 +145,24 @@ if (isMainThread) {
 
                 // Save city-specific heatmap using streaming approach for large datasets
                 const cityHeatmapPath = path.join(outputDir, `${cityKey}_heatmap.json`);
-                
+
                 // Use streaming write for large datasets to avoid call stack overflow
                 const writeStream = fs.createWriteStream(cityHeatmapPath);
                 writeStream.write('[');
-                
+
                 for (let i = 0; i < heatmapData.length; i++) {
                     if (i > 0) writeStream.write(',');
                     writeStream.write(JSON.stringify(heatmapData[i]));
                 }
-                
+
                 writeStream.write(']');
                 writeStream.end();
-                
+
                 // Wait for write to complete
                 await new Promise((resolve, reject) => {
                     writeStream.on('finish', resolve);
                     writeStream.on('error', reject);
                 });
-
-                // Also save as heatmap-grid.json for backward compatibility if this is Seattle
-                if (cityKey === 'USA_WA_Seattle') {
-                    const originalPath = path.join(outputDir, 'heatmap-grid.json');
-                    
-                    const originalWriteStream = fs.createWriteStream(originalPath);
-                    originalWriteStream.write('[');
-                    
-                    for (let i = 0; i < heatmapData.length; i++) {
-                        if (i > 0) originalWriteStream.write(',');
-                        originalWriteStream.write(JSON.stringify(heatmapData[i]));
-                    }
-                    
-                    originalWriteStream.write(']');
-                    originalWriteStream.end();
-                    
-                    // Wait for write to complete
-                    await new Promise((resolve, reject) => {
-                        originalWriteStream.on('finish', resolve);
-                        originalWriteStream.on('error', reject);
-                    });
-                }
 
                 logger.info(`Heatmap generation complete for ${cityKey}`, {
                     outputFile: cityHeatmapPath,
@@ -197,7 +175,7 @@ if (isMainThread) {
                 console.error(err);
             }
         }
-        
+
         // Save metadata about all heatmaps
         try {
             const metadataFile = path.join(__dirname, 'data', 'heatmaps', 'metadata.json');
@@ -212,13 +190,13 @@ if (isMainThread) {
                 algorithm: 'sound area distribution',
                 note: 'Generated using 1km equal-area grid with sound area distribution algorithm'
             };
-            
+
             fs.writeFileSync(metadataFile, JSON.stringify(metadata, null, 2));
             logger.info('Metadata saved', { metadataFile });
         } catch (err) {
             logger.warn('Failed to save metadata', err);
         }
-        
+
         console.log('\\n✅ Heatmap generation complete for all cities!');
         console.log(`📊 Generated heatmaps for ${Object.keys(config.cities).length} cities`);
         console.log(`📁 Output directory: data/heatmaps/`);
@@ -248,30 +226,30 @@ if (isMainThread) {
             }
 
             const planes = data.aircraft;
-            
+
             // Pre-filter aircraft that have valid coordinates
             const validPlanes = planes.filter(plane => plane.lat && plane.lon);
-            
+
             // Process all configured cities
             const cityGrids = {};
-            
+
             for (const [cityKey, cityCoords] of Object.entries(config.cities)) {
                 const aircraft = new Aircraft(cityCoords.lat, cityCoords.lon);
                 const radiusInMiles = config.defaultRadii[0] || 60; // Use first radius from config
-                
+
                 // Pre-filter planes within radius for this city (performance optimization)
-                const planesInRange = validPlanes.filter(plane => 
+                const planesInRange = validPlanes.filter(plane =>
                     Geo.distanceInMiles(plane.lat, plane.lon, cityCoords.lat, cityCoords.lon) < radiusInMiles
                 );
-                
+
                 // Make a new grid for this city
                 let grid = {};
-                
+
                 // Process planes and generate grid (only planes already filtered to be in range)
                 planesInRange.forEach(plane => {
                     aircraft.addLoudnessToGrid(plane, grid);
                 });
-                
+
                 cityGrids[cityKey] = grid;
             }
 
