@@ -99,8 +99,9 @@ if (isMainThread) {
 
                     for (let key in workerGrid) {
                         if (grid[key]) {
-                            // Combining the total loudness
-                            grid[key].totalLoudness += workerGrid[key].totalLoudness;
+                            // Combine linear power sums and counts for proper averaging
+                            grid[key].linearSum += workerGrid[key].linearSum;
+                            grid[key].count += workerGrid[key].count;
                         } else {
                             // Making sure we are adding valid entries into the grid only
                             if (workerGrid[key] && workerGrid[key].centralLat != null && workerGrid[key].centralLon != null) {
@@ -126,21 +127,30 @@ if (isMainThread) {
                     fs.mkdirSync(outputDir, { recursive: true });
                 }
 
-                // Convert grid to degrees and save
-                let heatmapData = aircraft.convertGridBackToDegrees(grid);
+                // Convert grid to degrees and save (using linear intensity for better visualization)
+                let heatmapData = aircraft.convertGridBackToDegrees(grid, 'linear');
 
                 // Sort by intensity and limit for web performance
                 heatmapData.sort((a, b) => b[2] - a[2]);
-                const maxPoints = TEST_MODE ? 5000 : 50000; // Limit points for web performance
-                if (heatmapData.length > maxPoints) {
-                    logger.info(`Limiting ${cityKey} heatmap to top ${maxPoints} points (was ${heatmapData.length})`);
-                    heatmapData = heatmapData.slice(0, maxPoints);
-                }
+                //const maxPoints = TEST_MODE ? 5000 : 50000; // Limit points for web performance
+                //if (heatmapData.length > maxPoints) {
+                //    logger.info(`Limiting ${cityKey} heatmap to top ${maxPoints} points (was ${heatmapData.length})`);
+                //    heatmapData = heatmapData.slice(0, maxPoints);
+                //}
+
+                // Calculate dB equivalents for logging
+                const maxLinear = heatmapData.length > 0 ? Math.max(...heatmapData.map(p => p[2])) : 0;
+                const minLinear = heatmapData.length > 0 ? Math.min(...heatmapData.map(p => p[2])) : 0;
+                const maxDB = maxLinear > 0 ? 10 * Math.log10(maxLinear) : 0;
+                const minDB = minLinear > 0 ? 10 * Math.log10(minLinear) : 0;
 
                 logger.info(`Heatmap data stats for ${cityKey}`, {
                     totalPoints: heatmapData.length,
-                    maxLoudness: heatmapData.length > 0 ? Math.max(...heatmapData.map(p => p[2])) : 0,
-                    minLoudness: heatmapData.length > 0 ? Math.min(...heatmapData.map(p => p[2])) : 0
+                    maxLinearIntensity: maxLinear.toFixed(0),
+                    minLinearIntensity: minLinear.toFixed(0),
+                    maxLoudnessDB: maxDB.toFixed(1),
+                    minLoudnessDB: minDB.toFixed(1),
+                    outputFormat: 'linear intensity (for perceptual accuracy)'
                 });
 
                 // Save city-specific heatmap using streaming approach for large datasets
@@ -188,7 +198,8 @@ if (isMainThread) {
                 processedFiles: filesToProcess.length,
                 gridSystemType: '1km equal-area grid',
                 algorithm: 'sound area distribution',
-                note: 'Generated using 1km equal-area grid with sound area distribution algorithm'
+                outputFormat: 'linear intensity',
+                note: 'Generated using 1km equal-area grid with sound area distribution algorithm. Values are linear sound intensity (not dB) for perceptually accurate visualization - higher values are exponentially louder.'
             };
 
             fs.writeFileSync(metadataFile, JSON.stringify(metadata, null, 2));

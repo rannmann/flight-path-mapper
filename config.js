@@ -30,7 +30,7 @@ const config = {
   // Default radii for flight path generation (in miles)
   defaultRadii: process.env.DEFAULT_RADII ?
     process.env.DEFAULT_RADII.split(',').map(r => parseInt(r.trim())) :
-    [20],
+    [40],
 
   // City coordinates for flight path generation
   cities: {
