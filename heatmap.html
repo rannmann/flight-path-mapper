@@ -283,9 +283,15 @@
     // Function to calculate circle radius for area = 1km^2
     const getRadiusInDegrees = (position, isLongitude = false) => {
         let rKm = Math.sqrt(1 / Math.PI);
-        let rDeg = rKm / 111.32; // convert km to degree
-        if (isLongitude) rDeg *= Math.cos(position.lat * Math.PI / 180);
-        return rDeg;
+        if (isLongitude) {
+            // For longitude, account for latitude compression
+            let rDeg = rKm / (111.32 * Math.cos(position.lat * Math.PI / 180));
+            return rDeg;
+        } else {
+            // For latitude, no compression needed
+            let rDeg = rKm / 111.32;
+            return rDeg;
+        }
     };
 
     // Setting up the moveend event on the map
