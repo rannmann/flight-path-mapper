@@ -4,31 +4,12 @@ const path = require('path');
 const {Worker, isMainThread, parentPort, workerData} = require('worker_threads');
 const async = require('async');
 const os = require('os');
+const config = require('./config');
 
-// Reduces granularity of data by skipping every-other file.
-// This means the result set will represent every 10s instead of every 5s.
-// Speeds up data generation and reduces the output file size.
-const LIGHTWEIGHT_MODE = false;
-
-// Every city in here will have a flight path generated.
-// The more you have, the more RAM it uses, so be careful.
-const GENERATOR_COORDINATES = {
-    'GBR_London': {lat: 51.5074, lon: -0.1278},
-    'GBR_Manchester': {lat: 53.4808, lon: -2.2426},
-    'USA_AZ_Phoenix': {lat: 33.4484, lon: -112.0740},
-    'USA_CA_LosAngeles': {lat: 34.0522, lon: -118.2437},
-    'USA_CO_Denver': {lat: 39.7392, lon: -104.9903},
-    'USA_FL_Miami': {lat: 25.7617, lon: -80.1918},
-    'USA_GA_Atlanta': {lat: 33.7490, lon: -84.3880},
-    'USA_IL_Chicago': {lat: 41.8781, lon: -87.6298},
-    'USA_MA_Boston': {lat: 42.3601, lon: -71.0589},
-    'USA_MD_Baltimore': {lat: 39.2904, lon: -76.6122},
-    'USA_TX_Dallas': {lat: 32.7767, lon: -96.7970},
-    'USA_WA_Tacoma': {lat: 47.2529, lon: -122.4443},
-};
-
-// Array of Radii in miles to generate multiple paths in one iteration.
-let radii = [20];
+// Get configuration from centralized config
+const LIGHTWEIGHT_MODE = config.processing.lightweightMode;
+const GENERATOR_COORDINATES = config.cities;
+const radii = config.defaultRadii;
 
 /**
  * Function to calculate distance between two geographical coordinates.
@@ -85,9 +66,9 @@ function isWithinRadius(lat, lon, radius) {
 
 if (isMainThread) {
     async function main() {
-        // JS multi-threading duplicates memory usage, so if this is too much, manually set it.
-        const CONCURRENCY_LIMIT = Math.round(os.cpus().length / 2);
-        const directory = 'flight-history/2023-09-01';
+        // Use config for concurrency control
+        const CONCURRENCY_LIMIT = config.processing.workerThreads || Math.round(os.cpus().length / 2);
+        const directory = path.join(config.paths.flightHistory, config.defaultDate);
         const files = fs.readdirSync(directory);
 
         let flightPaths = {};
@@ -132,7 +113,7 @@ if (isMainThread) {
 
             for (const city in flightPaths) {
                 radii.forEach(radius => {
-                    const outFile = `./flightpaths/${city}_${radius}_miles.json`;
+                    const outFile = path.join(config.paths.flightPaths, `${city}_${radius}_miles.json`);
                     fs.writeFileSync(outFile, JSON.stringify({
                         type: 'FeatureCollection',
                         features: Object.values(flightPaths[city][radius]),

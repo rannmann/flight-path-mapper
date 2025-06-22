@@ -121,10 +121,7 @@ FLIGHT_PATHS_DIR=flightpaths
 DEFAULT_DATE=2023-09-01
 DEFAULT_RADII=20,60            # Miles from city center
 
-# Heatmap options
-HEATMAP_GRID_SIZE=0.001        # Grid resolution in degrees
-HEATMAP_MAX_RADIUS=10          # Noise propagation radius
-NOISE_FACTOR=1.0               # Noise calculation multiplier
+# Note: Heatmap uses fixed 1km grid system and research-based noise propagation
 
 # Logging
 LOG_LEVEL=INFO                 # ERROR, WARN, INFO, DEBUG

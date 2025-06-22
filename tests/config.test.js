@@ -54,4 +54,10 @@ describe('Configuration', () => {
     const datePath = config.adsbExchange.getDatePath('2023-09-01');
     expect(datePath).toBe('2023/09/01');
   });
+
+  test('should have default date configuration', () => {
+    expect(config.defaultDate).toBeDefined();
+    expect(typeof config.defaultDate).toBe('string');
+    expect(config.defaultDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
 });
