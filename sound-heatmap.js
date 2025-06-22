@@ -119,6 +119,32 @@ if (isMainThread) {
             }
 
             logger.info(`Grid aggregation complete for ${cityKey}`, { gridSize: Object.keys(grid).length });
+            
+            // Debug summary for specific grid cell
+            if (process.env.DEBUG_GRID_CELL && grid[process.env.DEBUG_GRID_CELL]) {
+                const debugCell = grid[process.env.DEBUG_GRID_CELL];
+                const avgLinear = debugCell.linearSum / debugCell.count;
+                const avgDB = 10 * Math.log10(avgLinear);
+                console.log(`\n🎯 DEBUG SUMMARY for ${process.env.DEBUG_GRID_CELL}:`);
+                console.log(`  📊 Final stats: ${debugCell.count} operations, avg ${avgLinear.toFixed(0)} linear (${avgDB.toFixed(1)} dB)`);
+                console.log(`  📍 Grid center: [${debugCell.centralLat.toFixed(6)}, ${debugCell.centralLon.toFixed(6)}]`);
+                console.log(`  🔢 Total linear sum: ${debugCell.linearSum.toFixed(0)}`);
+                
+                // Compare with nearby cells for context
+                console.log(`\n🔍 NEARBY CELLS COMPARISON:`);
+                const [debugY, debugX] = process.env.DEBUG_GRID_CELL.split('_').map(Number);
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        const nearbyKey = `${debugY + dy}_${debugX + dx}`;
+                        if (grid[nearbyKey] && nearbyKey !== process.env.DEBUG_GRID_CELL) {
+                            const nearbyCell = grid[nearbyKey];
+                            const nearbyAvg = nearbyCell.linearSum / nearbyCell.count;
+                            const nearbyDB = 10 * Math.log10(nearbyAvg);
+                            console.log(`  ${nearbyKey}: ${nearbyCell.count} ops, ${nearbyAvg.toFixed(0)} linear (${nearbyDB.toFixed(1)} dB)`);
+                        }
+                    }
+                }
+            }
 
             try {
                 // Create output directory
