@@ -130,5 +130,5 @@ dist
 .pnp.*
 
 # generated flightpaths
-flightpaths/*
-flight-history/*
+data/*
+build/*

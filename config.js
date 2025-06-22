@@ -19,9 +19,9 @@ const config = {
 
   // Paths configuration
   paths: {
-    flightHistory: process.env.FLIGHT_HISTORY_DIR || 'flight-history',
-    flightPaths: process.env.FLIGHT_PATHS_DIR || 'flightpaths',
-    aircraftData: process.env.AIRCRAFT_DATA_FILE || 'lib/airplanes.json'
+    flightHistory: process.env.FLIGHT_HISTORY_DIR || 'data/flight-history',
+    flightPaths: process.env.FLIGHT_PATHS_DIR || 'data/flightpaths',
+    aircraftData: process.env.AIRCRAFT_DATA_FILE || 'data/airplanes.json'
   },
 
   // Default date for historical data (YYYY-MM-DD)
@@ -30,12 +30,15 @@ const config = {
   // Default radii for flight path generation (in miles)
   defaultRadii: process.env.DEFAULT_RADII ?
     process.env.DEFAULT_RADII.split(',').map(r => parseInt(r.trim())) :
-    [40],
+    [50],
 
   // City coordinates for flight path generation
   cities: {
     //'GBR_London': {lat: 51.5074, lon: -0.1278},
     //'GBR_Manchester': {lat: 53.4808, lon: -2.2426},
+    'USA_AK_Anchorage': {lat: 61.2181, lon: -149.9003},
+    'USA_AK_Fairbanks': {lat: 64.8378, lon: -147.7164},
+    'USA_AK_Palmer': {lat: 61.5833, lon: -149.4000},
     //'USA_AZ_Phoenix': {lat: 33.4484, lon: -112.0740},
     //'USA_CA_LosAngeles': {lat: 34.0522, lon: -118.2437},
     //'USA_CO_Denver': {lat: 39.7392, lon: -104.9903},

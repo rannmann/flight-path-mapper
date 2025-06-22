@@ -82,6 +82,21 @@ Access the web interface at `http://localhost:3000`:
 - **Flight Paths**: `http://localhost:3000/` - Interactive map with flight path overlays
 - **Noise Heatmap**: `http://localhost:3000/heatmap.html` - Aircraft noise visualization
 
+### 5. Static Build for Deployment (Optional)
+
+Generate a static version that can be deployed to GitHub Pages, Netlify, or any static web server:
+
+```bash
+npm run build
+```
+
+This creates a `build/` directory with:
+- Static HTML files that work without the Node.js backend
+- All data files included for offline viewing
+- Landing page with dataset overview
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
+
 ## Configuration
 
 The application uses a centralized configuration system. You can customize settings through environment variables or by editing `config.js`:
@@ -148,7 +163,7 @@ The web server provides several API endpoints:
 
 ```
 ├── config.js              # Centralized configuration
-├── download.js             # Data download script
+├── download.js            # Data download script
 ├── index.js               # Main processing engine
 ├── sound-heatmap.js       # Noise heatmap generator (WIP)
 ├── webserver.js           # HTTP server
@@ -173,6 +188,7 @@ npm run dev        # Start web server (alias)
 npm run download   # Download flight data
 npm run process    # Process flight paths
 npm run heatmap    # Generate noise heatmap
+npm run build      # Generate static build for deployment
 npm run clean      # Remove generated files
 npm run setup      # Create required directories
 ```

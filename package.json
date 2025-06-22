@@ -10,6 +10,7 @@
     "process": "node index.js",
     "heatmap": "node sound-heatmap.js",
     "heatmap:test": "TEST_MODE=true node sound-heatmap.js",
+    "build": "node build.js",
     "clean": "rm -rf flightpaths/* && rm -rf flight-history/*",
     "setup": "mkdir -p flightpaths flight-history",
     "test": "jest",
