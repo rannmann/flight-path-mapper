@@ -323,7 +323,7 @@
         sliderValueSpan.textContent = `${slider.value} dB`;
     }
 
-    // Adding a slider with a delay time of 75ms to prevent overlapping calls
+    // Adding a slider with adaptive delay based on dataset size
     let isThrottled = false;
     let lastKnownDBValue = 0;
     slider.oninput = function () {
@@ -333,12 +333,23 @@
         if (!isThrottled) {
             isThrottled = true;
 
+            // Calculate adaptive delay based on dataset size
+            const dataPointCount = currentHeatmapData ? currentHeatmapData.data.length : 0;
+            let delay = 75; // Base delay
+            if (dataPointCount > 30000) {
+                delay = 200; // Large datasets (30k+ points)
+            } else if (dataPointCount > 15000) {
+                delay = 150; // Medium datasets (15k-30k points)  
+            } else if (dataPointCount > 5000) {
+                delay = 100; // Small-medium datasets (5k-15k points)
+            }
+
             setTimeout(() => {
                 isThrottled = false;
                 loadHeatmapDataToMap(); // Will automatically get linear value from slider
                 // persisting state in url (store dB value)
                 window.location.hash = [map.getCenter().lat, map.getCenter().lng, map.getZoom(), lastKnownDBValue].join(",");
-            }, 75); // Delay in ms
+            }, delay);
         }
     }
 
