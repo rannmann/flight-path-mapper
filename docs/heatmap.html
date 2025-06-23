@@ -301,7 +301,14 @@
     map.on("moveend", function () {
         const currPosition = map.getCenter();
         heatmapCfg.radius = getRadiusInDegrees(currPosition, true) * 7;
-        heatmapLayer.cfg.radius = heatmapCfg.radius;
+        
+        // Only update heatmap layer if it exists and has data
+        if (heatmapLayer && heatmapLayer.cfg && currentHeatmapData) {
+            heatmapLayer.cfg.radius = heatmapCfg.radius;
+            // Redraw with new radius
+            loadHeatmapDataToMap();
+        }
+        
         // persisting state in url
         window.location.hash = [currPosition.lat, currPosition.lng, map.getZoom(), slider.value].join(",");
     });
@@ -413,23 +420,17 @@
     // Load available heatmap files
     async function loadAvailableHeatmaps() {
         try {
-            // Check what heatmap files exist
+            // Simply use metadata to determine available files
             const files = [];
 
             if (metadata && metadata.cities) {
-                for (const city of metadata.cities) {
-                    try {
-                        const response = await fetch(`data/heatmaps/${city}_heatmap.json`, { method: 'HEAD' });
-                        if (response.ok) {
-                            files.push(`${city}_heatmap.json`);
-                        }
-                    } catch (e) {
-                        // File doesn't exist, skip
-                    }
-                }
+                // Use metadata cities list directly - no need for HEAD requests
+                metadata.cities.forEach(city => {
+                    files.push(`${city}_heatmap.json`);
+                });
             }
 
-            // Also check for the legacy file
+            // Also check for the legacy file with a single HEAD request
             try {
                 const response = await fetch('data/heatmaps/heatmap-grid.json', { method: 'HEAD' });
                 if (response.ok) {
@@ -501,17 +502,19 @@
                 data: data.map(item => ({la: item[0], ln: item[1], v: item[2]}))
             };
 
-            // Apply current slider value (now at maximum for best visibility)
-            loadHeatmapDataToMap();
+            // Show info panel and center map first
+            showInfoPanel(filename, data);
+            centerMapOnData(data);
 
-            // Add heatmap layer to map
+            // Add heatmap layer to map after centering
             if (!map.hasLayer(heatmapLayer)) {
                 heatmapLayer.addTo(map);
             }
 
-            // Show info panel and center map
-            showInfoPanel(filename, data);
-            centerMapOnData(data);
+            // Apply current slider value after layer is added
+            setTimeout(() => {
+                loadHeatmapDataToMap();
+            }, 100);
 
             setStatus('online', `Loaded ${data.length} data points`);
         } catch (error) {
