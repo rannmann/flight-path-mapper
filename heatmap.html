@@ -264,16 +264,16 @@
     function updateSliderRange(minLinear, maxLinear) {
         const minDB = Math.round(linearToDecibels(minLinear));
         const maxDB = Math.round(linearToDecibels(maxLinear));
-        
+
         currentDataRange = { minLinear, maxLinear, minDB, maxDB };
-        
+
         slider.min = minDB;
         slider.max = maxDB;
         slider.value = maxDB; // Start at maximum for best visibility
-        
+
         const sliderLabel = document.getElementById('sliderLabel');
         sliderLabel.textContent = `Sound Level (${minDB}-${maxDB} dB):`;
-        
+
         updateSliderValue();
     }
 
@@ -301,7 +301,14 @@
     map.on("moveend", function () {
         const currPosition = map.getCenter();
         heatmapCfg.radius = getRadiusInDegrees(currPosition, true) * 7;
-        heatmapLayer.cfg.radius = heatmapCfg.radius;
+
+        // Only update heatmap layer if it exists and has data
+        if (heatmapLayer && heatmapLayer.cfg && currentHeatmapData) {
+            heatmapLayer.cfg.radius = heatmapCfg.radius;
+            // Redraw with new radius
+            loadHeatmapDataToMap();
+        }
+
         // persisting state in url
         window.location.hash = [currPosition.lat, currPosition.lng, map.getZoom(), slider.value].join(",");
     });
@@ -312,7 +319,7 @@
 
         // Use provided value or get from slider
         const maxValue = maxLinearValue || getLinearIntensityFromSlider();
-        
+
         const dataWithMax = {
             ...currentHeatmapData,
             max: maxValue
@@ -342,7 +349,7 @@
             if (dataPointCount > 30000) {
                 delay = 200; // Large datasets (30k+ points)
             } else if (dataPointCount > 15000) {
-                delay = 150; // Medium datasets (15k-30k points)  
+                delay = 150; // Medium datasets (15k-30k points)
             } else if (dataPointCount > 5000) {
                 delay = 100; // Small-medium datasets (5k-15k points)
             }
@@ -413,30 +420,14 @@
     // Load available heatmap files
     async function loadAvailableHeatmaps() {
         try {
-            // Check what heatmap files exist
+            // Simply use metadata to determine available files
             const files = [];
 
             if (metadata && metadata.cities) {
-                for (const city of metadata.cities) {
-                    try {
-                        const response = await fetch(`data/heatmaps/${city}_heatmap.json`, { method: 'HEAD' });
-                        if (response.ok) {
-                            files.push(`${city}_heatmap.json`);
-                        }
-                    } catch (e) {
-                        // File doesn't exist, skip
-                    }
-                }
-            }
-
-            // Also check for the legacy file
-            try {
-                const response = await fetch('data/heatmaps/heatmap-grid.json', { method: 'HEAD' });
-                if (response.ok) {
-                    files.push('heatmap-grid.json');
-                }
-            } catch (e) {
-                // File doesn't exist, skip
+                // Use metadata cities list directly - no need for HEAD requests
+                metadata.cities.forEach(city => {
+                    files.push(`${city}_heatmap.json`);
+                });
             }
 
             availableHeatmaps = files;
@@ -485,33 +476,35 @@
             }
 
             const data = await response.json();
-            
+
             // Calculate min/max intensity values for dynamic slider range
             const intensityValues = data.map(item => item[2]).filter(val => typeof val === 'number');
             const minLinear = Math.min(...intensityValues);
             const maxLinear = Math.max(...intensityValues);
-            
+
             console.log(`Loaded ${data.length} heatmap data points from ${filename}`);
             console.log(`Intensity range: ${minLinear.toFixed(0)} to ${maxLinear.toFixed(0)} linear (${linearToDecibels(minLinear).toFixed(1)} to ${linearToDecibels(maxLinear).toFixed(1)} dB)`);
-            
+
             // Update slider range based on actual data
             updateSliderRange(minLinear, maxLinear);
-            
+
             currentHeatmapData = {
                 data: data.map(item => ({la: item[0], ln: item[1], v: item[2]}))
             };
 
-            // Apply current slider value (now at maximum for best visibility)
-            loadHeatmapDataToMap();
+            // Show info panel and center map first
+            showInfoPanel(filename, data);
+            centerMapOnData(data);
 
-            // Add heatmap layer to map
+            // Add heatmap layer to map after centering
             if (!map.hasLayer(heatmapLayer)) {
                 heatmapLayer.addTo(map);
             }
 
-            // Show info panel and center map
-            showInfoPanel(filename, data);
-            centerMapOnData(data);
+            // Apply current slider value after layer is added
+            setTimeout(() => {
+                loadHeatmapDataToMap();
+            }, 100);
 
             setStatus('online', `Loaded ${data.length} data points`);
         } catch (error) {
@@ -568,14 +561,14 @@
         const lng = parseFloat(values[1]);
         const zoom = parseInt(values[2]);
         const dbValue = parseInt(values[3]);
-        
+
         map.setView([lat, lng], zoom);
-        
+
         // Set slider to the dB value from hash (if within current range)
         if (dbValue >= slider.min && dbValue <= slider.max) {
             slider.value = dbValue;
         }
-        
+
         updateSliderValue();
         loadHeatmapDataToMap(); // Will convert dB to linear automatically
     };
