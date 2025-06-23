@@ -184,7 +184,7 @@ class StaticBuildGenerator {
                      "const baseUrl = 'data/flightpaths/';")
             .replace(/<title>Flight Path Mapper<\/title>/, '<title>Flight Path Mapper - Static Build</title>');
         
-        await writeFile(path.join(this.buildDir, 'index.html'), staticHTML);
+        await writeFile(path.join(this.buildDir, 'flightpath.html'), staticHTML);
         console.log('   ✓ Generated static flight paths viewer');
     }
 
@@ -231,7 +231,7 @@ class StaticBuildGenerator {
         
         const indexHTML = this.generateIndexHTML(appConfig, flightPathEntries, heatmapEntries);
         
-        await writeFile(path.join(this.buildDir, 'landing.html'), indexHTML);
+        await writeFile(path.join(this.buildDir, 'index.html'), indexHTML);
         console.log('   ✓ Created index page');
     }
 
@@ -418,7 +418,7 @@ class StaticBuildGenerator {
             <div class="app-card">
                 <h2><i class="fas fa-route"></i> Flight Path Viewer</h2>
                 <p>Explore historical flight paths around major cities. Visualize aircraft routes, altitude patterns, and traffic density.</p>
-                <a href="index.html" class="launch-btn">
+                <a href="flightpath.html" class="launch-btn">
                     <i class="fas fa-external-link-alt"></i> Launch Viewer
                 </a>
                 
