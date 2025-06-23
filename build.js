@@ -104,15 +104,7 @@ class StaticBuildGenerator {
             console.log(`   ✓ Copied ${files.length} heatmap files`);
         }
         
-        // Copy aircraft data
-        const aircraftDataFile = path.join(this.sourceDir, 'data', 'airplanes.json');
-        if (fs.existsSync(aircraftDataFile)) {
-            await copyFile(
-                aircraftDataFile,
-                path.join(this.buildDir, 'data', 'airplanes.json')
-            );
-            console.log('   ✓ Copied aircraft data file');
-        }
+        // Note: airplanes.json is not needed for static build - only used during data processing
     }
 
     async generateStaticConfig() {
