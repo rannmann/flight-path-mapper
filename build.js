@@ -110,22 +110,31 @@ class StaticBuildGenerator {
     async generateStaticConfig() {
         console.log('⚙️  Generating static configuration...');
         
-        // Generate flightpaths listing
-        const flightPathsDir = path.join(this.buildDir, 'data', 'flightpaths');
-        const flightPathFiles = fs.existsSync(flightPathsDir) 
-            ? await readdir(flightPathsDir)
-            : [];
-        
-        const flightPathsConfig = {
-            files: flightPathFiles.filter(f => f.endsWith('.json')),
-            lastUpdated: new Date().toISOString(),
-            source: 'static-build'
-        };
-        
-        await writeFile(
-            path.join(this.buildDir, 'data', 'flightpaths.json'),
-            JSON.stringify(flightPathsConfig, null, 2)
-        );
+        // Copy and update flightpaths metadata if it exists
+        const sourceFlightPathsMetadata = path.join(this.sourceDir, 'data', 'flightpaths', 'metadata.json');
+        if (fs.existsSync(sourceFlightPathsMetadata)) {
+            await copyFile(
+                sourceFlightPathsMetadata,
+                path.join(this.buildDir, 'data', 'flightpaths', 'metadata.json')
+            );
+        } else {
+            // Generate flightpaths listing as fallback
+            const flightPathsDir = path.join(this.buildDir, 'data', 'flightpaths');
+            const flightPathFiles = fs.existsSync(flightPathsDir) 
+                ? await readdir(flightPathsDir)
+                : [];
+            
+            const flightPathsConfig = {
+                files: flightPathFiles.filter(f => f.endsWith('.json')),
+                lastUpdated: new Date().toISOString(),
+                source: 'static-build'
+            };
+            
+            await writeFile(
+                path.join(this.buildDir, 'data', 'flightpaths.json'),
+                JSON.stringify(flightPathsConfig, null, 2)
+            );
+        }
         
         // Generate heatmaps listing
         const heatmapsDir = path.join(this.buildDir, 'data', 'heatmaps');
@@ -202,32 +211,55 @@ class StaticBuildGenerator {
     async createIndexPage() {
         console.log('🏠 Creating index page...');
         
-        // Read available data files
-        const flightPathsConfig = JSON.parse(
-            await readFile(path.join(this.buildDir, 'data', 'flightpaths.json'), 'utf8')
-        );
-        const heatmapsConfig = JSON.parse(
-            await readFile(path.join(this.buildDir, 'data', 'heatmaps.json'), 'utf8')
-        );
+        // Read configuration
         const appConfig = JSON.parse(
             await readFile(path.join(this.buildDir, 'data', 'config.json'), 'utf8')
         );
         
-        // Generate flight path entries
-        const flightPathEntries = flightPathsConfig.files.map(file => {
-            const parts = file.replace('.json', '').split('_');
-            const city = parts.slice(0, -2).join(' ').replace(/_/g, ' ');
-            const radius = parts[parts.length - 2];
-            return { file, city, radius };
-        });
-        
-        // Generate heatmap entries
-        const heatmapEntries = heatmapsConfig.files
-            .filter(file => file !== 'metadata.json')
-            .map(file => {
-                const city = file.replace('_heatmap.json', '').replace(/_/g, ' ');
-                return { file, city };
+        // Read flight paths metadata or fallback
+        let flightPathEntries = [];
+        const flightPathsMetadataPath = path.join(this.buildDir, 'data', 'flightpaths', 'metadata.json');
+        if (fs.existsSync(flightPathsMetadataPath)) {
+            const flightPathsMetadata = JSON.parse(await readFile(flightPathsMetadataPath, 'utf8'));
+            flightPathEntries = flightPathsMetadata.files.map(fileInfo => ({
+                file: fileInfo.filename,
+                city: fileInfo.displayName,
+                radius: fileInfo.radius
+            }));
+        } else {
+            // Fallback to basic file listing
+            const flightPathsConfig = JSON.parse(
+                await readFile(path.join(this.buildDir, 'data', 'flightpaths.json'), 'utf8')
+            );
+            flightPathEntries = flightPathsConfig.files.map(file => {
+                const parts = file.replace('.json', '').split('_');
+                const city = parts.slice(0, -2).join(' ').replace(/_/g, ' ');
+                const radius = parts[parts.length - 2];
+                return { file, city, radius };
             });
+        }
+        
+        // Read heatmaps metadata or fallback
+        let heatmapEntries = [];
+        const heatmapsMetadataPath = path.join(this.buildDir, 'data', 'heatmaps', 'metadata.json');
+        if (fs.existsSync(heatmapsMetadataPath)) {
+            const heatmapsMetadata = JSON.parse(await readFile(heatmapsMetadataPath, 'utf8'));
+            heatmapEntries = heatmapsMetadata.cities.map(city => ({
+                file: `${city}_heatmap.json`,
+                city: city.replace(/_/g, ' ')
+            }));
+        } else {
+            // Fallback to basic file listing  
+            const heatmapsConfig = JSON.parse(
+                await readFile(path.join(this.buildDir, 'data', 'heatmaps.json'), 'utf8')
+            );
+            heatmapEntries = heatmapsConfig.files
+                .filter(file => file !== 'metadata.json')
+                .map(file => {
+                    const city = file.replace('_heatmap.json', '').replace(/_/g, ' ');
+                    return { file, city };
+                });
+        }
         
         const indexHTML = this.generateIndexHTML(appConfig, flightPathEntries, heatmapEntries);
         
