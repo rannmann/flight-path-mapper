@@ -227,7 +227,10 @@
 
 <script>
     // Variables and configurations
-    let map = L.map('mapid').setView([39.8283, -98.5795], 4); // Center of USA
+    let map = L.map('mapid', {
+        zoomSnap: 0.5, // Allow half-step zoom levels for more granular control
+        zoomDelta: 0.5 // Change zoom by 0.5 when using zoom buttons
+    }).setView([39.8283, -98.5795], 4); // Center of USA
     let slider = document.getElementById('slider');
     let datapoints = {};
     let currentDataRange = { minLinear: 0, maxLinear: 0, minDB: 35, maxDB: 115 };

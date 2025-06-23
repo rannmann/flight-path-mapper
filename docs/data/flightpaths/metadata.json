@@ -1,0 +1,110 @@
+{
+  "generated": "2025-06-23T21:15:00.000Z",
+  "dataDate": "2023-09-01",
+  "files": [
+    {
+      "filename": "GBR_London_20_miles.json",
+      "city": "London",
+      "country": "GBR",
+      "radius": 20,
+      "displayName": "London, UK"
+    },
+    {
+      "filename": "GBR_Manchester_20_miles.json", 
+      "city": "Manchester",
+      "country": "GBR",
+      "radius": 20,
+      "displayName": "Manchester, UK"
+    },
+    {
+      "filename": "USA_AZ_Phoenix_20_miles.json",
+      "city": "Phoenix", 
+      "country": "USA",
+      "state": "AZ",
+      "radius": 20,
+      "displayName": "Phoenix, AZ"
+    },
+    {
+      "filename": "USA_CA_LosAngeles_20_miles.json",
+      "city": "LosAngeles",
+      "country": "USA", 
+      "state": "CA",
+      "radius": 20,
+      "displayName": "Los Angeles, CA"
+    },
+    {
+      "filename": "USA_CO_Denver_20_miles.json",
+      "city": "Denver",
+      "country": "USA",
+      "state": "CO", 
+      "radius": 20,
+      "displayName": "Denver, CO"
+    },
+    {
+      "filename": "USA_FL_Miami_20_miles.json",
+      "city": "Miami",
+      "country": "USA",
+      "state": "FL",
+      "radius": 20,
+      "displayName": "Miami, FL"
+    },
+    {
+      "filename": "USA_GA_Atlanta_20_miles.json",
+      "city": "Atlanta",
+      "country": "USA",
+      "state": "GA",
+      "radius": 20,
+      "displayName": "Atlanta, GA"
+    },
+    {
+      "filename": "USA_IL_Chicago_20_miles.json",
+      "city": "Chicago",
+      "country": "USA",
+      "state": "IL",
+      "radius": 20,
+      "displayName": "Chicago, IL"
+    },
+    {
+      "filename": "USA_MA_Boston_20_miles.json",
+      "city": "Boston",
+      "country": "USA",
+      "state": "MA",
+      "radius": 20,
+      "displayName": "Boston, MA"
+    },
+    {
+      "filename": "USA_MD_Baltimore_20_miles.json",
+      "city": "Baltimore",
+      "country": "USA",
+      "state": "MD",
+      "radius": 20,
+      "displayName": "Baltimore, MD"
+    },
+    {
+      "filename": "USA_TX_Dallas_20_miles.json",
+      "city": "Dallas",
+      "country": "USA",
+      "state": "TX",
+      "radius": 20,
+      "displayName": "Dallas, TX"
+    },
+    {
+      "filename": "USA_WA_Seattle_80_miles.json",
+      "city": "Seattle",
+      "country": "USA",
+      "state": "WA",
+      "radius": 80,
+      "displayName": "Seattle, WA"
+    },
+    {
+      "filename": "USA_WA_Tacoma_20_miles.json",
+      "city": "Tacoma",
+      "country": "USA",
+      "state": "WA",
+      "radius": 20,
+      "displayName": "Tacoma, WA"
+    }
+  ],
+  "totalFiles": 13,
+  "source": "flight-path-mapper"
+}

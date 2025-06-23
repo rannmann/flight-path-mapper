@@ -232,7 +232,10 @@
             }
 
             initMap() {
-                this.map = L.map('map').setView([39.8283, -98.5795], 4); // Center of USA
+                this.map = L.map('map', {
+                    zoomSnap: 0.5, // Allow half-step zoom levels for more granular control
+                    zoomDelta: 0.5 // Change zoom by 0.5 when using zoom buttons
+                }).setView([39.8283, -98.5795], 4); // Center of USA
 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
@@ -259,6 +262,20 @@
                 this.setStatus('loading', 'Loading flight paths...');
                 
                 try {
+                    // Try to load from metadata first (for static builds)
+                    let response = await fetch('data/flightpaths/metadata.json');
+                    if (response.ok) {
+                        const metadata = await response.json();
+                        this.populateDropdownFromMetadata(metadata);
+                        this.setStatus('online', `${metadata.files.length} flight paths available`);
+                        return;
+                    }
+                } catch (error) {
+                    console.log('No metadata found, trying server API...');
+                }
+
+                try {
+                    // Fallback to server API
                     const response = await fetch('data/flightpaths.json').then(r => r.json()).then(config => config.files);
                     const files = await response.json();
                     this.populateDropdown(files);
@@ -268,6 +285,30 @@
                     this.populateDropdown(this.getFallbackFiles());
                     this.setStatus('offline', 'Using cached data (server offline)');
                 }
+            }
+
+            populateDropdownFromMetadata(metadata) {
+                const select = document.getElementById('citySelect');
+                select.innerHTML = '<option value="">Select a city...</option>';
+                
+                // Sort files by display name
+                const sortedFiles = [...metadata.files].sort((a, b) => 
+                    a.displayName.localeCompare(b.displayName)
+                );
+
+                // Add options using display names from metadata
+                sortedFiles.forEach(fileInfo => {
+                    const option = document.createElement('option');
+                    option.value = fileInfo.filename;
+                    option.textContent = `${fileInfo.displayName} (${fileInfo.radius} miles)`;
+                    select.appendChild(option);
+                });
+
+                select.onchange = (e) => {
+                    if (e.target.value) {
+                        this.loadFlightPath(e.target.value);
+                    }
+                };
             }
 
             populateDropdown(files) {
