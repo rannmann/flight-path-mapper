@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Path Noise Heatmap - Static Build</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        select, button, input[type="range"] {
+            padding: 0.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        select {
+            min-width: 200px;
+            background: white;
+            border: 1px solid #ddd;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #2980b9;
+        }
+
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            color: #f39c12;
+        }
+
+        input[type="range"] {
+            background: white;
+            border: 1px solid #ddd;
+            min-width: 150px;
+        }
+
+        #mapContainer {
+            flex: 1;
+            position: relative;
+        }
+
+        #mapid {
+            height: 100%;
+            width: 100%;
+        }
+
+        .map-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .map-overlay h3 {
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .map-overlay p {
+            margin: 0.25rem 0;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-online { background: #27ae60; }
+        .status-offline { background: #e74c3c; }
+        .status-loading { background: #f39c12; }
+
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 0.75rem;
+            }
+
+            .header h1 {
+                font-size: 1.25rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.5rem;
+            }
+
+            .control-group {
+                justify-content: space-between;
+            }
+
+            select {
+                min-width: auto;
+                flex: 1;
+            }
+
+            .map-overlay {
+                position: relative;
+                top: 0;
+                left: 0;
+                margin: 10px;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <h1><i class="fas fa-fire"></i> Flight Path Noise Heatmap</h1>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="citySelect">City:</label>
+                    <select id="citySelect">
+                        <option value="">Select a city...</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="slider" id="sliderLabel">Sound Level:</label>
+                    <input type="range" min="35" max="115" value="85" step="1" id="slider">
+                    <span id="sliderValue">85 dB</span>
+                </div>
+                <div class="control-group">
+                    <button id="refreshBtn" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="control-group">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="statusText">Loading...</span>
+                </div>
+            </div>
+        </header>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+        <div id="mapContainer">
+            <div id="mapid"></div>
+            <div class="map-overlay" id="infoPanel" style="display: none;">
+                <h3>Heatmap Info</h3>
+                <p id="cityInfo"></p>
+                <p id="dataPoints"></p>
+                <p id="dataDate"></p>
+                <p id="generationInfo"></p>
+            </div>
+        </div>
+    </div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.2/heatmap.min.js"></script>
+<script src="https://cdn.rawgit.com/pa7/heatmap.js/develop/plugins/leaflet-heatmap/leaflet-heatmap.js"></script>
+
+<script>
+    // Variables and configurations
+    let map = L.map('mapid').setView([39.8283, -98.5795], 4); // Center of USA
+    let slider = document.getElementById('slider');
+    let datapoints = {};
+    let currentDataRange = { minLinear: 0, maxLinear: 0, minDB: 35, maxDB: 115 };
+
+    // Set base layer for the map
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+    }).addTo(map);
+
+    const heatmapCfg = {
+        "radius": .02,
+        "maxOpacity": .3,
+        "blur": 1,
+        "scaleRadius": true,
+        latField: 'la',
+        lngField: 'ln',
+        valueField: 'v'
+    };
+    const heatmapLayer = new HeatmapOverlay(heatmapCfg);
+
+    // Helper functions for dB and linear intensity conversion
+    function linearToDecibels(linearValue) {
+        return 10 * Math.log10(linearValue);
+    }
+
+    function decibelsToLinear(dbValue) {
+        return Math.pow(10, dbValue / 10);
+    }
+
+    // Update slider range based on actual data
+    function updateSliderRange(minLinear, maxLinear) {
+        const minDB = Math.round(linearToDecibels(minLinear));
+        const maxDB = Math.round(linearToDecibels(maxLinear));
+        
+        currentDataRange = { minLinear, maxLinear, minDB, maxDB };
+        
+        slider.min = minDB;
+        slider.max = maxDB;
+        slider.value = maxDB; // Start at maximum for best visibility
+        
+        const sliderLabel = document.getElementById('sliderLabel');
+        sliderLabel.textContent = `Sound Level (${minDB}-${maxDB} dB):`;
+        
+        updateSliderValue();
+    }
+
+    // Convert current slider dB value to linear intensity for heatmap
+    function getLinearIntensityFromSlider() {
+        const sliderDB = parseInt(slider.value);
+        return decibelsToLinear(sliderDB);
+    }
+
+    // Function to calculate circle radius for area = 1km^2
+    const getRadiusInDegrees = (position, isLongitude = false) => {
+        let rKm = Math.sqrt(1 / Math.PI);
+        if (isLongitude) {
+            // For longitude, account for latitude compression
+            let rDeg = rKm / (111.32 * Math.cos(position.lat * Math.PI / 180));
+            return rDeg;
+        } else {
+            // For latitude, no compression needed
+            let rDeg = rKm / 111.32;
+            return rDeg;
+        }
+    };
+
+    // Setting up the moveend event on the map
+    map.on("moveend", function () {
+        const currPosition = map.getCenter();
+        heatmapCfg.radius = getRadiusInDegrees(currPosition, true) * 7;
+        heatmapLayer.cfg.radius = heatmapCfg.radius;
+        // persisting state in url
+        window.location.hash = [currPosition.lat, currPosition.lng, map.getZoom(), slider.value].join(",");
+    });
+
+    // Load heatmap data on UI
+    const loadHeatmapDataToMap = (maxLinearValue = null) => {
+        if (!currentHeatmapData) return;
+
+        // Use provided value or get from slider
+        const maxValue = maxLinearValue || getLinearIntensityFromSlider();
+        
+        const dataWithMax = {
+            ...currentHeatmapData,
+            max: maxValue
+        };
+        heatmapLayer.setData(dataWithMax);
+    };
+
+    // Update slider value display
+    function updateSliderValue() {
+        const sliderValueSpan = document.getElementById('sliderValue');
+        sliderValueSpan.textContent = `${slider.value} dB`;
+    }
+
+    // Adding a slider with adaptive delay based on dataset size
+    let isThrottled = false;
+    let lastKnownDBValue = 0;
+    slider.oninput = function () {
+        lastKnownDBValue = this.value;
+        updateSliderValue();
+
+        if (!isThrottled) {
+            isThrottled = true;
+
+            // Calculate adaptive delay based on dataset size
+            const dataPointCount = currentHeatmapData ? currentHeatmapData.data.length : 0;
+            let delay = 75; // Base delay
+            if (dataPointCount > 30000) {
+                delay = 200; // Large datasets (30k+ points)
+            } else if (dataPointCount > 15000) {
+                delay = 150; // Medium datasets (15k-30k points)  
+            } else if (dataPointCount > 5000) {
+                delay = 100; // Small-medium datasets (5k-15k points)
+            }
+
+            setTimeout(() => {
+                isThrottled = false;
+                loadHeatmapDataToMap(); // Will automatically get linear value from slider
+                // persisting state in url (store dB value)
+                window.location.hash = [map.getCenter().lat, map.getCenter().lng, map.getZoom(), lastKnownDBValue].join(",");
+            }, delay);
+        }
+    }
+
+    // Status management
+    function setStatus(status, message) {
+        const indicator = document.getElementById('statusIndicator');
+        const text = document.getElementById('statusText');
+
+        indicator.className = `status-indicator status-${status}`;
+        text.textContent = message;
+    }
+
+    // Error display
+    function showError(message) {
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 5000);
+    }
+
+    // Refresh data
+    function refreshData() {
+        location.reload();
+    }
+
+    // Application state
+    let currentHeatmapData = null;
+    let metadata = null;
+    let availableHeatmaps = [];
+
+    // Initialize the application
+    async function init() {
+        await loadMetadata();
+        await loadAvailableHeatmaps();
+        updateSliderValue();
+
+        // Check if we have incoming settings. If we do, use them.
+        if (window.location.hash !== "") {
+            const values = window.location.hash.substring(1).split(",");
+            loadMapWithHashSettings(values);
+        }
+    }
+
+    // Load metadata
+    async function loadMetadata() {
+        try {
+            const response = await fetch('data/heatmaps/metadata.json');
+            metadata = await response.json();
+            setStatus('online', 'Metadata loaded');
+        } catch (error) {
+            console.warn('Could not load metadata:', error);
+            setStatus('offline', 'No metadata available');
+        }
+    }
+
+    // Load available heatmap files
+    async function loadAvailableHeatmaps() {
+        try {
+            // Check what heatmap files exist
+            const files = [];
+
+            if (metadata && metadata.cities) {
+                for (const city of metadata.cities) {
+                    try {
+                        const response = await fetch(`data/heatmaps/${city}_heatmap.json`, { method: 'HEAD' });
+                        if (response.ok) {
+                            files.push(`${city}_heatmap.json`);
+                        }
+                    } catch (e) {
+                        // File doesn't exist, skip
+                    }
+                }
+            }
+
+            // Also check for the legacy file
+            try {
+                const response = await fetch('data/heatmaps/heatmap-grid.json', { method: 'HEAD' });
+                if (response.ok) {
+                    files.push('heatmap-grid.json');
+                }
+            } catch (e) {
+                // File doesn't exist, skip
+            }
+
+            availableHeatmaps = files;
+            populateDropdown(files);
+            setStatus('online', `${files.length} heatmaps available`);
+        } catch (error) {
+            console.error('Failed to load available heatmaps:', error);
+            setStatus('offline', 'Failed to load heatmaps');
+        }
+    }
+
+    // Populate the dropdown with available heatmaps
+    function populateDropdown(files) {
+        const select = document.getElementById('citySelect');
+        select.innerHTML = '<option value="">Select a city...</option>';
+
+        files.forEach(file => {
+            const option = document.createElement('option');
+            option.value = file;
+
+            if (file === 'heatmap-grid.json') {
+                option.textContent = 'Seattle (Legacy)';
+            } else {
+                const cityName = file.replace('_heatmap.json', '').replace(/_/g, ' ');
+                option.textContent = cityName;
+            }
+
+            select.appendChild(option);
+        });
+
+        select.onchange = (e) => {
+            if (e.target.value) {
+                loadHeatmapData(e.target.value);
+            }
+        };
+    }
+
+    // Load specific heatmap data
+    async function loadHeatmapData(filename) {
+        setStatus('loading', 'Loading heatmap data...');
+
+        try {
+            const response = await fetch(`data/heatmaps/${filename}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            
+            // Calculate min/max intensity values for dynamic slider range
+            const intensityValues = data.map(item => item[2]).filter(val => typeof val === 'number');
+            const minLinear = Math.min(...intensityValues);
+            const maxLinear = Math.max(...intensityValues);
+            
+            console.log(`Loaded ${data.length} heatmap data points from ${filename}`);
+            console.log(`Intensity range: ${minLinear.toFixed(0)} to ${maxLinear.toFixed(0)} linear (${linearToDecibels(minLinear).toFixed(1)} to ${linearToDecibels(maxLinear).toFixed(1)} dB)`);
+            
+            // Update slider range based on actual data
+            updateSliderRange(minLinear, maxLinear);
+            
+            currentHeatmapData = {
+                data: data.map(item => ({la: item[0], ln: item[1], v: item[2]}))
+            };
+
+            // Apply current slider value (now at maximum for best visibility)
+            loadHeatmapDataToMap();
+
+            // Add heatmap layer to map
+            if (!map.hasLayer(heatmapLayer)) {
+                heatmapLayer.addTo(map);
+            }
+
+            // Show info panel and center map
+            showInfoPanel(filename, data);
+            centerMapOnData(data);
+
+            setStatus('online', `Loaded ${data.length} data points`);
+        } catch (error) {
+            console.error('Failed to load heatmap data:', error);
+            showError(`Failed to load heatmap data: ${error.message}`);
+            setStatus('offline', 'Failed to load heatmap data');
+        }
+    }
+
+    // Center map on heatmap data
+    function centerMapOnData(data) {
+        if (data.length === 0) return;
+
+        const lats = data.map(item => item[0]);
+        const lngs = data.map(item => item[1]);
+
+        const bounds = [
+            [Math.min(...lats), Math.min(...lngs)],
+            [Math.max(...lats), Math.max(...lngs)]
+        ];
+
+        map.fitBounds(bounds, { padding: [20, 20] });
+    }
+
+    // Show info panel
+    function showInfoPanel(filename, data) {
+        const infoPanel = document.getElementById('infoPanel');
+        const cityInfo = document.getElementById('cityInfo');
+        const dataPoints = document.getElementById('dataPoints');
+        const dataDate = document.getElementById('dataDate');
+        const generationInfo = document.getElementById('generationInfo');
+
+        let cityName;
+        if (filename === 'heatmap-grid.json') {
+            cityName = 'Seattle (Legacy)';
+        } else {
+            cityName = filename.replace('_heatmap.json', '').replace(/_/g, ' ');
+        }
+
+        cityInfo.textContent = cityName;
+        dataPoints.textContent = `${data.length} data points • ${currentDataRange.minDB}-${currentDataRange.maxDB} dB range`;
+
+        if (metadata) {
+            dataDate.textContent = `Data from: ${metadata.dataDate}`;
+            generationInfo.textContent = `${metadata.gridSystemType} • ${metadata.algorithm}`;
+        }
+
+        infoPanel.style.display = 'block';
+    }
+
+    // Helper function to load map with hash settings.
+    const loadMapWithHashSettings = (values) => {
+        const lat = parseFloat(values[0]);
+        const lng = parseFloat(values[1]);
+        const zoom = parseInt(values[2]);
+        const dbValue = parseInt(values[3]);
+        
+        map.setView([lat, lng], zoom);
+        
+        // Set slider to the dB value from hash (if within current range)
+        if (dbValue >= slider.min && dbValue <= slider.max) {
+            slider.value = dbValue;
+        }
+        
+        updateSliderValue();
+        loadHeatmapDataToMap(); // Will convert dB to linear automatically
+    };
+
+    // Initialize when page loads
+    window.addEventListener('load', init);
+</script>
+</body>
+</html>

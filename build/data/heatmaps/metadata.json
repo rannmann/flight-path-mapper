@@ -1,0 +1,29 @@
+{
+  "generated": "2025-06-22T23:24:27.031Z",
+  "dataDate": "2023-09-01",
+  "cities": [
+    "CAN_Toronto",
+    "DE_Berlin",
+    "FRA_Paris",
+    "JPN_Tokyo",
+    "GBR_London",
+    "GBR_Manchester",
+    "USA_AK_Anchorage",
+    "USA_AZ_Phoenix",
+    "USA_CA_LosAngeles",
+    "USA_CO_Denver",
+    "USA_FL_Miami",
+    "USA_GA_Atlanta",
+    "USA_IL_Chicago",
+    "USA_MA_Boston",
+    "USA_TX_Dallas",
+    "USA_WA_Seattle"
+  ],
+  "radiusInMiles": 80,
+  "testMode": false,
+  "processedFiles": 17278,
+  "gridSystemType": "1km equal-area grid",
+  "algorithm": "sound area distribution",
+  "outputFormat": "linear intensity",
+  "note": "Generated using 1km equal-area grid with sound area distribution algorithm. Values are linear sound intensity (not dB) for perceptually accurate visualization - higher values are exponentially louder."
+}

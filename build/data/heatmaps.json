@@ -1,0 +1,23 @@
+{
+  "files": [
+    "CAN_Toronto_heatmap.json",
+    "DE_Berlin_heatmap.json",
+    "FRA_Paris_heatmap.json",
+    "GBR_London_heatmap.json",
+    "GBR_Manchester_heatmap.json",
+    "JPN_Tokyo_heatmap.json",
+    "USA_AK_Anchorage_heatmap.json",
+    "USA_AZ_Phoenix_heatmap.json",
+    "USA_CA_LosAngeles_heatmap.json",
+    "USA_CO_Denver_heatmap.json",
+    "USA_FL_Miami_heatmap.json",
+    "USA_GA_Atlanta_heatmap.json",
+    "USA_IL_Chicago_heatmap.json",
+    "USA_MA_Boston_heatmap.json",
+    "USA_TX_Dallas_heatmap.json",
+    "USA_WA_Seattle_heatmap.json",
+    "metadata.json"
+  ],
+  "lastUpdated": "2025-06-23T21:12:20.378Z",
+  "source": "static-build"
+}
