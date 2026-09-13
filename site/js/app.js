@@ -476,10 +476,15 @@
             }
         }
 
-        const date = (meta && meta.date) || (config && config.date);
-        if (date) {
+        const dates = (meta && meta.dates) || (config && config.dates) || [];
+        const date = (meta && meta.date) || (config && config.date) || (dates.length === 1 ? dates[0] : null);
+        if (dates.length > 1) {
+            const first = dates[0], last = dates[dates.length - 1];
+            $('subtitle').textContent = `Estimated from ${dates.length} days of ADS-B data, ${first} to ${last}`;
+            $('aboutDate').textContent = `${dates.length} separate days between ${first} and ${last}, averaged`;
+        } else if (date) {
             $('subtitle').textContent = `Estimated from ADS-B data for ${date}`;
-            $('aboutDate').textContent = date;
+            $('aboutDate').textContent = `one day, ${date}`;
         }
         if (meta && meta.generatedAt) {
             const when = new Date(meta.generatedAt);

@@ -110,6 +110,9 @@ describe('render-tiles', () => {
         expect(meta.metaTileSize).toBe(8);
         expect(meta.maxZoom).toBe(3);
         expect(meta.date).toBe('2026-01-01');
+        expect(meta.dates).toEqual(['2026-01-01']);
+        expect(meta.days).toBe(1);
+        expect(meta.label).toBe('2026-01-01');
         expect(meta.stats).toEqual({ observations: 42 });
         expect(meta.layers.dnl).toMatchObject({
             encoding: 'db', offset: DB_OFFSET, step: DB_STEP, cutoffDb: CUTOFF_DB, metatiles: 4

@@ -141,7 +141,9 @@ function build({
 
     // 5. Site config
     const siteConfig = {
-        date: (meta && meta.date) || config.defaultDate || null,
+        date: (meta && meta.date) || (meta && meta.dates ? null : config.defaultDate) || null,
+        dates: (meta && meta.dates) || null,
+        label: (meta && meta.label) || null,
         cities: citiesFromConfig(config),
         generatedAt: new Date().toISOString()
     };
