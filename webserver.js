@@ -1,215 +1,130 @@
+/**
+ * Static file server for the built site (config.paths.site, normally docs/).
+ * This is a local preview of what GitHub Pages serves; there is no API
+ * beyond /api/status.
+ */
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const url = require('url');
 const config = require('./config');
 const logger = require('./lib/logger');
 
+const SITE_ROOT = path.resolve(__dirname, config.paths.site);
+const META_FILE = path.join(SITE_ROOT, 'data', 'tiles', 'meta.json');
+
 const MIME_TYPES = {
-    '.html': 'text/html',
-    '.js': 'text/javascript',
-    '.css': 'text/css',
-    '.json': 'application/json',
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
     '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.ico': 'image/x-icon'
+    '.ico': 'image/x-icon',
+    '.svg': 'image/svg+xml',
+    '.txt': 'text/plain; charset=utf-8'
 };
 
-const server = http.createServer((req, res) => {
+function sendJson(res, status, body) {
+    res.writeHead(status, { 'Content-Type': MIME_TYPES['.json'] });
+    res.end(JSON.stringify(body));
+}
+
+function sendText(res, status, text) {
+    res.writeHead(status, { 'Content-Type': MIME_TYPES['.txt'] });
+    res.end(text);
+}
+
+/** Resolve a URL path to a file inside SITE_ROOT, or null if it escapes. */
+function resolveSitePath(pathname) {
+    let decoded;
     try {
-        const requestedUrl = url.parse(req.url);
-        const pathname = requestedUrl.pathname === '/' ? '/index.html' : requestedUrl.pathname;
-        const ext = path.parse(pathname).ext;
-        
-        // Add CORS headers
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-        if (req.method === 'OPTIONS') {
-            res.writeHead(200);
-            res.end();
-            return;
-        }
-
-        const contentType = MIME_TYPES[ext] || 'text/plain';
-
-        // API endpoints
-        if (pathname === '/listflightpaths') {
-            handleFlightPathsList(res);
-        } else if (pathname === '/listheatmaps') {
-            handleHeatmapsList(res);
-        } else if (pathname === '/api/config') {
-            handleConfigEndpoint(res);
-        } else if (pathname === '/api/status') {
-            handleStatusEndpoint(res);
-        } else if (pathname.startsWith('/data/')) {
-            // Serve data files (heatmaps, etc.)
-            handleDataFile(pathname, contentType, res);
-        } else {
-            // Static file serving
-            handleStaticFile(pathname, contentType, res);
-        }
-    } catch (error) {
-        logger.error('Server error', { error: error.message, stack: error.stack });
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Internal server error' }));
+        decoded = decodeURIComponent(pathname);
+    } catch (err) {
+        return null;
     }
-});
-
-function handleFlightPathsList(res) {
-    const flightPathsDir = path.join(__dirname, config.paths.flightPaths);
-    
-    fs.readdir(flightPathsDir, (err, files) => {
-        if (err) {
-            logger.warn('Failed to read flightpaths directory', { error: err.message });
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify([]));
-            return;
-        }
-        
-        // Filter only JSON files
-        const jsonFiles = files.filter(file => file.endsWith('.json'));
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(jsonFiles));
-        logger.debug('Listed flight paths', { count: jsonFiles.length });
-    });
+    if (decoded.includes('\0')) return null;
+    const resolved = path.resolve(SITE_ROOT, '.' + path.posix.normalize('/' + decoded));
+    if (resolved !== SITE_ROOT && !resolved.startsWith(SITE_ROOT + path.sep)) return null;
+    return resolved;
 }
 
-function handleHeatmapsList(res) {
-    const heatmapsDir = path.join(__dirname, 'data', 'heatmaps');
-    
-    fs.readdir(heatmapsDir, (err, files) => {
-        if (err) {
-            logger.warn('Failed to read heatmaps directory', { error: err.message });
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify([]));
-            return;
-        }
-        
-        // Filter only heatmap JSON files (not metadata)
-        const heatmapFiles = files.filter(file => file.endsWith('_heatmap.json'));
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(heatmapFiles));
-        logger.debug('Listed heatmaps', { count: heatmapFiles.length });
-    });
-}
-
-function handleConfigEndpoint(res) {
-    const clientConfig = {
-        cities: Object.keys(config.cities),
-        defaultRadii: config.defaultRadii,
-        defaultDate: config.defaultDate
-    };
-    
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(clientConfig));
-}
-
-function handleStatusEndpoint(res) {
+function handleStatus(res) {
     const status = {
         server: 'running',
         timestamp: new Date().toISOString(),
-        flightPathsCount: 0,
-        dataDirectoryExists: fs.existsSync(path.join(__dirname, config.paths.flightHistory)),
-        heatmapDataExists: fs.existsSync(path.join(__dirname, 'data', 'heatmaps', 'heatmap-grid.json'))
+        siteRoot: SITE_ROOT,
+        siteExists: fs.existsSync(SITE_ROOT),
+        metaExists: fs.existsSync(META_FILE),
+        meta: null
     };
-
-    // Count flight path files
-    try {
-        const files = fs.readdirSync(path.join(__dirname, config.paths.flightPaths));
-        status.flightPathsCount = files.filter(f => f.endsWith('.json')).length;
-    } catch (err) {
-        status.flightPathsCount = 0;
-    }
-
-    // Get heatmap metadata if available
-    try {
-        const metadataPath = path.join(__dirname, 'data', 'heatmaps', 'metadata.json');
-        if (fs.existsSync(metadataPath)) {
-            status.heatmapMetadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    if (status.metaExists) {
+        try {
+            status.meta = JSON.parse(fs.readFileSync(META_FILE, 'utf8'));
+        } catch (err) {
+            status.metaError = err.message;
         }
-    } catch (err) {
-        // Ignore metadata errors
     }
-
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(status));
+    sendJson(res, 200, status);
 }
 
-function handleDataFile(pathname, contentType, res) {
-    const filePath = path.join(__dirname, pathname);
-    
-    // Security: ensure the path is within the data directory
-    const dataDir = path.join(__dirname, 'data');
-    const resolvedPath = path.resolve(filePath);
-    if (!resolvedPath.startsWith(dataDir)) {
-        logger.warn('Attempted access outside data directory', { pathname, resolvedPath });
-        res.writeHead(403, { 'Content-Type': 'text/plain' });
-        res.end('Access denied');
+function handleStatic(pathname, res) {
+    if (!fs.existsSync(SITE_ROOT)) {
+        sendText(res, 503, `Site directory ${config.paths.site}/ does not exist yet. Run "npm run build" first.\n`);
         return;
     }
-    
+    let filePath = resolveSitePath(pathname);
+    if (!filePath) {
+        logger.warn('Rejected path outside site root', { pathname });
+        sendText(res, 403, 'Forbidden\n');
+        return;
+    }
+    try {
+        if (fs.statSync(filePath).isDirectory()) filePath = path.join(filePath, 'index.html');
+    } catch (err) {
+        // fall through to readFile, which reports 404
+    }
     fs.readFile(filePath, (err, data) => {
         if (err) {
-            logger.warn('Data file not found', { path: pathname });
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Data file not found' }));
-        } else {
-            res.writeHead(200, { 'Content-Type': contentType });
-            res.end(data);
-            logger.debug('Served data file', { path: pathname, size: data.length });
+            sendText(res, 404, `Not found: ${pathname}\n`);
+            return;
         }
+        const contentType = MIME_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': contentType, 'Content-Length': data.length, 'Cache-Control': 'no-cache' });
+        res.end(data);
     });
 }
 
-function handleStaticFile(pathname, contentType, res) {
-    const filePath = path.join(__dirname, pathname);
-    
-    fs.readFile(filePath, (err, data) => {
-        if (err) {
-            logger.warn('File not found', { path: pathname });
-            res.writeHead(404, { 'Content-Type': 'text/html' });
-            res.end(`
-                <html>
-                    <head><title>404 - Not Found</title></head>
-                    <body>
-                        <h1>404 - File Not Found</h1>
-                        <p>The requested file <code>${pathname}</code> was not found.</p>
-                        <a href="/">Return to home</a>
-                    </body>
-                </html>
-            `);
-        } else {
-            res.writeHead(200, { 'Content-Type': contentType });
-            res.end(data);
-            logger.debug('Served file', { path: pathname, size: data.length });
+const server = http.createServer((req, res) => {
+    try {
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+            sendText(res, 405, 'Method not allowed\n');
+            return;
+        }
+        const pathname = new URL(req.url, 'http://localhost').pathname;
+        if (pathname === '/api/status') handleStatus(res);
+        else handleStatic(pathname, res);
+    } catch (err) {
+        logger.error('Server error', { error: err.message });
+        sendJson(res, 500, { error: 'Internal server error' });
+    }
+});
+
+if (require.main === module) {
+    server.listen(config.server.port, config.server.host, () => {
+        logger.info('Static server started', {
+            url: `http://${config.server.host}:${config.server.port}`,
+            root: SITE_ROOT
+        });
+        if (!fs.existsSync(SITE_ROOT)) {
+            logger.warn(`${config.paths.site}/ does not exist yet; run "npm run build" to generate it`);
         }
     });
+
+    const shutdown = (signal) => {
+        logger.info(`Received ${signal}, shutting down`);
+        server.close(() => process.exit(0));
+    };
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
-server.listen(config.server.port, config.server.host, () => {
-    logger.info(`Flight Path Mapper server started`, { 
-        host: config.server.host, 
-        port: config.server.port,
-        url: `http://${config.server.host}:${config.server.port}`
-    });
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    logger.info('Received SIGTERM, shutting down gracefully');
-    server.close(() => {
-        logger.info('Server closed');
-        process.exit(0);
-    });
-});
-
-process.on('SIGINT', () => {
-    logger.info('Received SIGINT, shutting down gracefully');
-    server.close(() => {
-        logger.info('Server closed');
-        process.exit(0);
-    });
-});
+module.exports = { server, resolveSitePath, MIME_TYPES };

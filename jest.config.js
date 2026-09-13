@@ -7,8 +7,9 @@ module.exports = {
     '!**/tests/**',
     '!**/coverage/**',
     '!**/logs/**',
-    '!**/flight-history/**',
-    '!**/flightpaths/**',
+    '!**/data/**',
+    '!**/docs/**',
+    '!**/site/**',
     '!jest.config.js'
   ],
   coverageDirectory: 'coverage',
