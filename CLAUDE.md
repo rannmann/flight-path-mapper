@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-**Flight Path Mapper** turns one day of global ADS-B Exchange snapshots
-(5-second interval, ~17,280 gzipped JSON files) into two planet-wide static
-map layers:
+**Flight Path Mapper** turns one or more days of global ADS-B Exchange
+snapshots (5-second interval, ~17,280 gzipped JSON files per day) into
+three planet-wide static map layers, averaged per day:
 
 1. **Aircraft noise** - Day-Night Average Sound Level (DNL) estimated with a
    category-based source model, SAE AIR 5662 lateral attenuation and ETOPO
@@ -28,6 +28,8 @@ preparation is a small Python script (numpy + h5py).
 - `download.js` - snapshot and terrain downloads
 - `scripts/prepare-terrain.py` - ETOPO 2022 + OurAirports -> `data/terrain/`
 - `scripts/generate-noise.js` - worker-thread pipeline -> `data/noise/<date>/`
+- `scripts/merge-noise.js` - average several `data/noise/<date>/` into `data/noise/merged/`
+- `scripts/run-days.js` - download, generate, clean up, merge, render, build for a list of dates
 - `scripts/render-tiles.js` - sparse grid -> `data/tiles/`
 - `scripts/build-site.js` - `site/` + tiles -> `docs/` (keeps the published
   `docs/data/flightpaths/` unless `--flightpaths` / `--no-flightpaths`)
@@ -42,6 +44,7 @@ preparation is a small Python script (numpy + h5py).
 
 - `npm run download` / `npm run download:terrain` / `npm run terrain`
 - `npm run noise` (full day) / `npm run noise:test` (1-in-40 stride)
+- `npm run days -- --dates 2025-10-01,...` (multi-day, first of each month) / `npm run merge`
 - `npm run tiles` / `npm run build` / `npm start`
 - `npm test`
 

@@ -256,7 +256,10 @@ function render(options = {}) {
 
     const manifestPath = path.join(inDir, 'manifest.json');
     const manifest = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : {};
-    const date = manifest.date || path.basename(inDir);
+    // A merged multi-day grid (scripts/merge-noise.js) has `dates` and no single `date`.
+    const dates = Array.isArray(manifest.dates) && manifest.dates.length ? manifest.dates.slice() : null;
+    const date = manifest.date || (dates ? null : path.basename(inDir));
+    const label = manifest.label || date || (dates ? `${dates.length} days, ${dates[0]} to ${dates[dates.length - 1]}` : path.basename(inDir));
 
     // Keep entries for layers that are not being re-rendered.
     const metaPath = path.join(outDir, 'meta.json');
@@ -300,6 +303,9 @@ function render(options = {}) {
     const meta = {
         generatedAt: new Date().toISOString(),
         date,
+        dates: dates || (date ? [date] : []),
+        days: dates ? dates.length : (date ? 1 : 0),
+        label,
         tileSize: TILE_SIZE,
         metaTileSize: META_TILE_SIZE,
         maxZoom,

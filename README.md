@@ -58,6 +58,14 @@ npm run build              # docs/: the static site (GitHub Pages root)
 npm start                  # preview docs/ at http://localhost:3000
 ```
 
+`npm run days -- --dates 2025-10-01,2025-11-01,...` builds the site from
+several days at once: for each date it downloads the archive, generates the
+grids and deletes the snapshots again (about 20 GB per day; pass `--keep`
+to keep them), overlapping the next download with the current generation.
+The days are then averaged with `npm run merge` into `data/noise/merged/`
+and rendered from there. ADS-B Exchange publishes a full day for the first
+of every month, so those are the dates to use.
+
 `npm run all` runs `noise`, `tiles` and `build` in sequence. `npm run paths`
 generates the per-city flight path GeoJSON (see below); `npm run build`
 keeps whatever flight paths are already published in `docs/data/flightpaths/`
@@ -96,6 +104,7 @@ data/noise/<date>/            dnl.0.tiles (energy grid), traffic.0.tiles (second
                               one aircraft at 45 dB or louder), manifest.json
 data/tiles/<layer>/<z>/       greyscale PNG metatiles (8 x 8 tiles of 256 px)
 data/flightpaths/             <city>_<radius>_miles.json + metadata.json
+data/noise/merged/            average of several days (npm run merge)
 docs/                         static site: index.html, data/tiles/, meta.json
 ```
 

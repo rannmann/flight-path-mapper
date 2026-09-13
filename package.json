@@ -13,7 +13,9 @@
     "terrain": "python3 scripts/prepare-terrain.py",
     "noise": "node scripts/generate-noise.js",
     "noise:test": "node scripts/generate-noise.js --stride 40",
+    "merge": "node scripts/merge-noise.js",
     "tiles": "node scripts/render-tiles.js",
+    "days": "node scripts/run-days.js",
     "paths": "node index.js",
     "build": "node scripts/build-site.js",
     "all": "npm run noise && npm run tiles && npm run build",
@@ -37,7 +39,6 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^1.5.0",
-    "cheerio": "^1.0.0-rc.12",
     "p-limit": "^3.1.0"
   },
   "devDependencies": {

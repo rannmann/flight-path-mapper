@@ -48,6 +48,19 @@ fresh `github-pages` branch now and then.
 The old page URLs (`heatmap.html`, `flightpath.html`) redirect to the
 noise map and `flightpaths.html`.
 
+## Multi-day builds
+
+A single day is noisy in the statistical sense: helicopter, military and
+business traffic is bursty, and one quiet Friday can hide a hospital
+helipad completely. `npm run days -- --dates ...` averages the first of
+several months. Disk is the constraint, not compute: each day is 17 to
+21 GB of gzip snapshots and 4 GB of grids. The orchestrator keeps at most
+two days of snapshots on disk (downloading the next while generating the
+current) and refuses to start a download with less than 30 GB free, so a
+12-day run needs roughly 50 GB for the grids plus 45 GB of headroom. A day
+downloads in about 13 minutes at 20 MB/s and generates in 12 to 15 minutes
+on 12 cores, so 12 days take about 3.5 hours wall clock.
+
 ## Local preview
 
 ```bash

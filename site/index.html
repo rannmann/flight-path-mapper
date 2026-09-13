@@ -62,7 +62,7 @@
                 <summary>About this map</summary>
                 <div class="about-body">
                     <p><b>DNL</b> (Day-Night Average Sound Level) is the 24-hour average A-weighted sound level with a 10 dB penalty added to everything between 22:00 and 07:00. It is the metric used by the US FAA and many other regulators to describe airport noise exposure.</p>
-                    <p>This map covers <b id="aboutDate">one day</b> of ADS-B position reports from ADS-B Exchange. Each aircraft sighting is turned into an A-weighted level at every nearby ground cell (roughly 1 km) and integrated over the day.</p>
+                    <p>This map is built from ADS-B Exchange position reports covering <b id="aboutDate">one day</b>. Each aircraft sighting is turned into an A-weighted level at every nearby ground cell (roughly 1 km) and integrated over each day. When several days are combined, every layer is the per-day average: DNL of the mean sound energy, and mean seconds per day for the other two. ADS-B Exchange publishes a full day of data for the first of each month, so multi-day builds are made of those.</p>
                     <p><b>Time above 45 dB</b> is for people who care about audible events rather than averages: it is the clock time per day during which at least one aircraft is estimated at 45 dB or louder at that cell, roughly the level that is clearly audible indoors in a quiet room. Overlapping aircraft count once, so it never exceeds 24 hours. Aircraft only: road and rail noise are not included, and a blank cell can mean no receiver coverage rather than silence.</p>
                     <p>Main assumptions:</p>
                     <ul>
@@ -70,9 +70,9 @@
                         <li>Spherical spreading, 1 dB/km atmospheric absorption, and SAE AIR 5662 lateral attenuation by lateral distance and elevation angle.</li>
                         <li>Height above ground from ETOPO 2022 terrain (2 arc-minute), with airport elevations overriding it near runways.</li>
                         <li>Night is defined by local solar time (UTC + longitude / 15 h), not civil time zones.</li>
-                        <li>Traffic density counts seconds of aircraft presence per cell over the day; overlapping aircraft add.</li>
+                        <li>Traffic density counts seconds of aircraft presence per cell per day; overlapping aircraft add.</li>
                     </ul>
-                    <p>These are <b>estimates, not measurements</b>. Coverage depends on ADS-B receivers, so oceans and remote areas are under-reported, and a single day may not reflect typical operations.</p>
+                    <p>These are <b>estimates, not measurements</b>. Coverage depends on ADS-B receivers, so oceans and remote areas are under-reported, and a handful of days may not reflect typical operations.</p>
                     <p id="aboutGenerated"></p>
                     <p><a href="https://github.com/rannmann/flight-path-mapper">Source code and methodology</a></p>
                 </div>

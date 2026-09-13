@@ -87,3 +87,25 @@ describe('detectPhase', () => {
     expect(detectPhase({ aglFt: 4000, verticalRate: 100, gs: 200 })).toBe('level');
   });
 });
+
+describe('effectiveCategory with ICAO type', () => {
+  const { effectiveCategory, isRotorcraftType } = require('../lib/noise/categories');
+  test('a helicopter type with no category is treated as rotorcraft', () => {
+    expect(effectiveCategory({ t: 'A139', gs: 120 }, 1500)).toBe('A7');
+    expect(effectiveCategory({ t: 'R44', gs: 90 }, 800)).toBe('A7');
+    expect(effectiveCategory({ category: 'A0', t: 'EC35', gs: 110 }, 1200)).toBe('A7');
+  });
+  test('a broadcast category wins over the type', () => {
+    expect(effectiveCategory({ category: 'A1', t: 'A139', gs: 120 }, 1500)).toBe('A1');
+  });
+  test('non-helicopter types still fall back to speed classes', () => {
+    expect(effectiveCategory({ t: 'C172', gs: 100 }, 2000)).toBe('A1');
+    expect(effectiveCategory({ t: 'B738', gs: 250 }, 3000)).toBe('A2');
+    expect(effectiveCategory({ gs: 450 }, 35000)).toBe('A3');
+  });
+  test('isRotorcraftType is tolerant of case and padding', () => {
+    expect(isRotorcraftType(' r44 ')).toBe(true);
+    expect(isRotorcraftType('')).toBe(false);
+    expect(isRotorcraftType(undefined)).toBe(false);
+  });
+});

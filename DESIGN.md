@@ -102,3 +102,28 @@ touched tiles are allocated.
 
 The browser colours the value tiles on a canvas, so the legend, threshold
 slider and hover readout work without regenerating data.
+
+## Several days
+
+ADS-B Exchange publishes a full day of snapshots for the first of every
+month. `scripts/merge-noise.js` averages any number of generated days:
+every grid holds a linear per-day quantity (sound energy times seconds for
+DNL, seconds for the other two layers), so the merged cell is the sum over
+days divided by the number of days, including days on which the cell was
+silent. DNL of the mean energy is the multi-day DNL in the same sense as
+an annual-average DNL. The seconds layers become mean seconds per day.
+
+One day is a poor sample for bursty sources: on 2023-09-01 there were
+exactly two air-ambulance flights and one police patrol over Toronto, so
+the hospital helipads showed nothing but airport traffic. Twelve first-of-
+month days cover every weekday at least once and smooth that out.
+
+## Helicopters without a category
+
+Roughly one record in six has no emitter category. The speed-based
+fallback would file a helicopter as a light piston aircraft, 12 dB too
+quiet in level flight, so `effectiveCategory` first checks the ICAO type
+designator (`t` in the snapshots) against a list of helicopter types and
+assigns A7 when it matches. Speed itself never enters the source level:
+levels are per second, so a slow or hovering helicopter simply deposits
+more seconds into the same cells.
