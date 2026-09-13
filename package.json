@@ -1,32 +1,46 @@
 {
   "name": "flight-path-mapper",
-  "version": "1.0.0",
-  "description": "A tool for downloading, processing, and visualizing global flight data with noise heatmap analysis",
+  "version": "2.0.0",
+  "description": "Planet-wide aircraft noise (DNL) and traffic map built from a day of ADS-B Exchange data, served as static tiles",
   "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node webserver.js",
-    "dev": "node webserver.js",
     "download": "node download.js",
-    "process": "node index.js",
-    "heatmap": "node sound-heatmap.js",
-    "heatmap:test": "TEST_MODE=true node sound-heatmap.js",
-    "build": "node build.js",
-    "clean": "rm -rf flightpaths/* && rm -rf flight-history/*",
-    "setup": "mkdir -p flightpaths flight-history",
+    "download:terrain": "node download.js --terrain",
+    "terrain": "python3 scripts/prepare-terrain.py",
+    "noise": "node scripts/generate-noise.js",
+    "noise:test": "node scripts/generate-noise.js --stride 40",
+    "tiles": "node scripts/render-tiles.js",
+    "paths": "node index.js",
+    "build": "node scripts/build-site.js",
+    "all": "npm run noise && npm run tiles && npm run build",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "clean": "rm -rf data/noise data/tiles docs",
+    "setup": "mkdir -p data/flight-history data/flightpaths data/terrain data/noise data/tiles"
   },
-  "keywords": ["flight", "data", "visualization", "aviation", "noise", "heatmap"],
+  "keywords": [
+    "aircraft",
+    "noise",
+    "dnl",
+    "ads-b",
+    "adsbexchange",
+    "flight-paths",
+    "map-tiles",
+    "aviation",
+    "geojson"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "async": "^3.2.4",
     "axios": "^1.5.0",
     "cheerio": "^1.0.0-rc.12",
     "p-limit": "^3.1.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1",
     "jest": "^29.7.0"
   }
 }

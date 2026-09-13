@@ -1,63 +1,65 @@
 const config = require('../config');
 
 describe('Configuration', () => {
-  test('should have default server configuration', () => {
-    expect(config.server.port).toBeDefined();
-    expect(config.server.host).toBeDefined();
+  test('server configuration', () => {
     expect(typeof config.server.port).toBe('number');
+    expect(typeof config.server.host).toBe('string');
   });
 
-  test('should have processing configuration', () => {
-    expect(config.processing).toBeDefined();
+  test('processing configuration', () => {
     expect(typeof config.processing.lightweightMode).toBe('boolean');
-    expect(typeof config.processing.concurrencyLimit).toBe('number');
     expect(config.processing.concurrencyLimit).toBeGreaterThan(0);
+    expect(Number.isInteger(config.processing.workerThreads)).toBe(true);
+    expect(config.processing.workerThreads).toBeGreaterThanOrEqual(1);
   });
 
-  test('should have path configuration', () => {
-    expect(config.paths.flightHistory).toBeDefined();
-    expect(config.paths.flightPaths).toBeDefined();
-    expect(config.paths.aircraftData).toBeDefined();
-  });
-
-  test('should have cities configuration', () => {
-    expect(config.cities).toBeDefined();
-    expect(typeof config.cities).toBe('object');
-    
-    // Check that cities have required lat/lon properties
-    Object.values(config.cities).forEach(city => {
-      expect(city.lat).toBeDefined();
-      expect(city.lon).toBeDefined();
-      expect(typeof city.lat).toBe('number');
-      expect(typeof city.lon).toBe('number');
-      expect(city.lat).toBeGreaterThanOrEqual(-90);
-      expect(city.lat).toBeLessThanOrEqual(90);
-      expect(city.lon).toBeGreaterThanOrEqual(-180);
-      expect(city.lon).toBeLessThanOrEqual(180);
+  test('paths are complete and relative', () => {
+    expect(config.paths).toEqual({
+      flightHistory: 'data/flight-history',
+      flightPaths: 'data/flightpaths',
+      terrain: 'data/terrain',
+      noise: 'data/noise',
+      tiles: 'data/tiles',
+      site: 'docs'
     });
+    Object.values(config.paths).forEach(p => expect(p.startsWith('/')).toBe(false));
   });
 
-  test('should have valid default radii', () => {
+  test('cities have valid coordinates and key style', () => {
+    const names = Object.keys(config.cities);
+    expect(names.length).toBeGreaterThan(20);
+    names.forEach(name => {
+      expect(name).toMatch(/^[A-Z]{2,3}(_[A-Z]{2})?_[A-Za-z]+$/);
+      const { lat, lon } = config.cities[name];
+      expect(lat).toBeGreaterThanOrEqual(-90);
+      expect(lat).toBeLessThanOrEqual(90);
+      expect(lon).toBeGreaterThanOrEqual(-180);
+      expect(lon).toBeLessThanOrEqual(180);
+    });
+    ['AUS_Sydney', 'SGP_Singapore', 'ARE_Dubai', 'DE_Frankfurt', 'NLD_Amsterdam',
+      'MEX_MexicoCity', 'BRA_SaoPaulo', 'IND_Mumbai', 'HKG_HongKong', 'ZAF_Johannesburg',
+      'USA_WA_Seattle', 'GBR_London'].forEach(c => expect(config.cities[c]).toBeDefined());
+  });
+
+  test('default radii', () => {
     expect(Array.isArray(config.defaultRadii)).toBe(true);
     expect(config.defaultRadii.length).toBeGreaterThan(0);
-    config.defaultRadii.forEach(radius => {
-      expect(typeof radius).toBe('number');
-      expect(radius).toBeGreaterThan(0);
-    });
+    config.defaultRadii.forEach(r => expect(r).toBeGreaterThan(0));
   });
 
-  test('should have ADS-B Exchange configuration', () => {
-    expect(config.adsbExchange.baseUrl).toBeDefined();
-    expect(typeof config.adsbExchange.getDatePath).toBe('function');
-    
-    // Test date path function
-    const datePath = config.adsbExchange.getDatePath('2023-09-01');
-    expect(datePath).toBe('2023/09/01');
+  test('ADS-B Exchange configuration', () => {
+    expect(config.adsbExchange.baseUrl).toMatch(/^https:\/\//);
+    expect(config.adsbExchange.getDatePath('2023-09-01')).toBe('2023/09/01');
+    expect(() => config.adsbExchange.getDatePath('2023/09/01')).toThrow();
   });
 
-  test('should have default date configuration', () => {
-    expect(config.defaultDate).toBeDefined();
-    expect(typeof config.defaultDate).toBe('string');
+  test('default date', () => {
     expect(config.defaultDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  test('terrain sources', () => {
+    expect(config.terrain.sources).toHaveLength(2);
+    expect(config.terrain.sources[0]).toMatch(/ETOPO_2022_v1_60s_N90W180_surface\.nc$/);
+    expect(config.terrain.sources[1]).toMatch(/airports\.csv$/);
   });
 });

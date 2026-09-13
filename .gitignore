@@ -129,6 +129,11 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-# generated flightpaths
+# generated data: snapshots, terrain, noise grids, tiles (docs/ stays tracked, it is the Pages root)
 data/*
-build/*
+!data/.gitkeep
+# scripts/build-site.js parks the published flight paths here while it rebuilds docs/
+.flightpaths-keep/
+
+# IDE
+.idea/
