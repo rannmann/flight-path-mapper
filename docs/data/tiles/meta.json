@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-09-10T21:21:36.939Z",
-  "date": "2023-09-01",
+  "generatedAt": "2026-09-13T22:05:11.238Z",
+  "date": null,
+  "dates": [
+    "2025-10-01",
+    "2025-11-01",
+    "2025-12-01",
+    "2026-01-01",
+    "2026-02-01",
+    "2026-03-01",
+    "2026-04-01",
+    "2026-05-01",
+    "2026-06-01",
+    "2026-07-01",
+    "2026-08-01",
+    "2026-09-01"
+  ],
+  "days": 12,
+  "label": "12 days, 2025-10-01 to 2026-09-01",
   "tileSize": 256,
   "metaTileSize": 8,
   "maxZoom": 8,
@@ -11,14 +27,14 @@
       "step": 0.25,
       "cutoffDb": 35,
       "minValue": 35,
-      "maxValue": 88.5,
-      "metatiles": 368
+      "maxValue": 90.5,
+      "metatiles": 482
     },
     "traffic": {
       "encoding": "log40",
       "minValue": 0.059253725177288885,
-      "maxValue": 1258924.411794166,
-      "metatiles": 727
+      "maxValue": 749893.2093324559,
+      "metatiles": 729
     },
     "above45": {
       "encoding": "log40",
@@ -26,21 +42,21 @@
       "unit": "seconds per day with at least one aircraft at or above thresholdDb",
       "minValue": 0.059253725177288885,
       "maxValue": 84138.51416451947,
-      "metatiles": 421
+      "metatiles": 566
     }
   },
   "stats": {
-    "files": 17278,
-    "records": 228909647,
-    "observations": 178449234,
-    "samples": 369994514,
-    "updates": 85155931619,
-    "skippedNotSource": 4153740,
-    "skippedNoPosition": 25444077,
-    "skippedStale": 20862596,
+    "files": 207360,
+    "records": 2699033345,
+    "observations": 2130727720,
+    "samples": 4408965161,
+    "updates": 1041761185966,
+    "skippedNotSource": 82130735,
+    "skippedNoPosition": 289004198,
+    "skippedStale": 197170692,
     "corruptFiles": 0,
-    "checks": 129282512054,
-    "tiles": 58663
+    "checks": 1581688049870,
+    "tiles": 71778
   },
   "source": "ADS-B Exchange samples"
 }
