@@ -96,6 +96,7 @@ a { color: var(--accent); }
     font-weight: 500;
     color: var(--ink-faint);
     margin-top: 1px;
+    white-space: normal; /* the date range of a multi-day build wraps instead of clipping */
 }
 
 .panel-toggle {
