@@ -1,89 +1,188 @@
+#!/usr/bin/env node
+/**
+ * Downloads one day of ADS-B Exchange readsb-hist snapshots (5 s interval,
+ * ~17,280 gzip files) into data/flight-history/<date>/, or with --terrain
+ * the ETOPO DEM and OurAirports inputs into data/terrain/.
+ *
+ *   node download.js [--date YYYY-MM-DD] [--verify]
+ *   node download.js --terrain
+ *
+ * --verify re-checks every existing snapshot with gunzip and re-downloads
+ * the ones that fail (the default only trusts that the file is non-empty).
+ */
 const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
+const { pipeline } = require('stream/promises');
 const pLimit = require('p-limit');
+const config = require('./config');
+const logger = require('./lib/logger');
 
-const CONCURRENCY_LIMIT = 10;   // Adjust as needed.
+const MAX_ATTEMPTS = 3;
+const BACKOFF_MS = 1500;
+const PROGRESS_EVERY = 200;
 
-const limit = pLimit(CONCURRENCY_LIMIT);
+function parseArgs(argv) {
+    const args = { terrain: false, verify: false, date: null };
+    for (let i = 0; i < argv.length; i++) {
+        const a = argv[i];
+        if (a === '--terrain') args.terrain = true;
+        else if (a === '--verify') args.verify = true;
+        else if (a === '--date') args.date = argv[++i];
+        else if (a.startsWith('--date=')) args.date = a.slice(7);
+        else throw new Error(`Unknown argument ${a}`);
+    }
+    return args;
+}
 
-/**
- * @param url
- * @returns {Promise<any>}
- */
-const fetchURL = async (url) => {
-    const response = await axios.get(url);
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function fetchHtml(url) {
+    const response = await axios.get(url, { responseType: 'text', timeout: 60000 });
     return response.data;
-};
+}
 
-/**
- * @param html
- * @returns {*[]}
- */
-const extractLinks = (html) => {
+/** File names linked from a directory listing, excluding sub-directories. */
+function extractLinks(html) {
     const $ = cheerio.load(html);
-    const fileLinks = [];
-
+    const files = [];
     $('a').each((i, link) => {
-        const linkHref = $(link).attr('href');
-        // Exclude the directory navigation links
-        if (linkHref && !linkHref.endsWith('/')) {
-            fileLinks.push(linkHref);
+        const href = $(link).attr('href');
+        if (href && !href.endsWith('/') && !href.startsWith('?') && !href.startsWith('#')) {
+            files.push(href);
         }
     });
+    return files;
+}
 
-    return fileLinks;
-};
-
-/**
- * @param fileUrl
- * @param outputFolder
- * @returns {Promise<unknown>}
- */
-const downloadFile = async (fileUrl, outputFolder) => {
+/** Stream a URL to disk via a temporary .part file. */
+async function streamToFile(url, outputPath) {
+    const tmp = `${outputPath}.part`;
+    const response = await axios({ url, method: 'GET', responseType: 'stream', timeout: 120000 });
     try {
-        const url = `https://samples.adsbexchange.com/readsb-hist/2023/09/01/${fileUrl}`;
-        const outputPath = path.join(outputFolder, fileUrl);
-        const writer = fs.createWriteStream(outputPath);
-        const response = await axios({
-            url,
-            method: 'GET',
-            responseType: 'stream'
-        });
-
-        response.data.pipe(writer);
-
-        return new Promise((resolve, reject) => {
-            writer.on('finish', resolve);
-            writer.on('error', reject);
-        })
+        await pipeline(response.data, fs.createWriteStream(tmp));
+        fs.renameSync(tmp, outputPath);
     } catch (err) {
-        console.error(err.message);
+        fs.rmSync(tmp, { force: true });
+        throw err;
     }
-};
+}
+
+function gzipIsReadable(filePath) {
+    try {
+        zlib.gunzipSync(fs.readFileSync(filePath));
+        return true;
+    } catch (err) {
+        return false;
+    }
+}
+
+function isNonEmptyFile(filePath) {
+    try {
+        return fs.statSync(filePath).size > 0;
+    } catch (err) {
+        return false;
+    }
+}
 
 /**
- * @returns {Promise<void>}
+ * Download with retries. `verify(path)` runs after each attempt; a false
+ * result deletes the file and counts as a failure.
  */
-const main = async () => {
-    const url = 'https://samples.adsbexchange.com/readsb-hist/2023/09/01/';
-    const outputFolder = 'flight-history/2023-09-01';
-
-    const html = await fetchURL(url);
-    const fileUrls = extractLinks(html);
-    const downloads = fileUrls.map(fileUrl => limit(async () => {
-        const outputPath = path.join(outputFolder, fileUrl);
-
-        if (!fs.existsSync(outputPath)) {
-            await downloadFile(fileUrl, outputFolder);
-            console.log(`Downloaded ${fileUrl}`);
-        } else {
-            console.log(`File ${fileUrl} already exists. Skipping.`);
+async function downloadWithRetry(url, outputPath, verify = null) {
+    let lastError = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+            await streamToFile(url, outputPath);
+            if (verify && !verify(outputPath)) {
+                fs.rmSync(outputPath, { force: true });
+                throw new Error('verification failed (not a readable gzip)');
+            }
+            return true;
+        } catch (err) {
+            lastError = err;
+            if (attempt < MAX_ATTEMPTS) {
+                const wait = BACKOFF_MS * Math.pow(2, attempt - 1);
+                logger.warn(`Retrying ${path.basename(outputPath)} in ${wait} ms`, { attempt, error: err.message });
+                await sleep(wait);
+            }
         }
-    }));
+    }
+    logger.error(`Giving up on ${path.basename(outputPath)}`, { error: lastError && lastError.message });
+    return false;
+}
 
-    await Promise.all(downloads);
-};
+async function downloadSnapshots(date, verifyExisting) {
+    const datePath = config.adsbExchange.getDatePath(date);
+    const baseUrl = `${config.adsbExchange.baseUrl}/${datePath}/`;
+    const outputDir = path.join(config.paths.flightHistory, date);
+    fs.mkdirSync(outputDir, { recursive: true });
 
-main().catch(console.error);
+    logger.info('Fetching file list', { url: baseUrl });
+    const files = extractLinks(await fetchHtml(baseUrl)).filter(f => f.endsWith('.json.gz'));
+    if (files.length === 0) throw new Error(`No snapshot files listed at ${baseUrl}`);
+    logger.info(`Found ${files.length} snapshots`, { date, outputDir });
+
+    const limit = pLimit(config.processing.concurrencyLimit);
+    const stats = { downloaded: 0, skipped: 0, failed: 0, done: 0 };
+
+    await Promise.all(files.map(file => limit(async () => {
+        const outputPath = path.join(outputDir, file);
+        const complete = verifyExisting ? gzipIsReadable(outputPath) : isNonEmptyFile(outputPath);
+        if (complete) {
+            stats.skipped++;
+        } else {
+            if (fs.existsSync(outputPath)) {
+                logger.warn(`Replacing incomplete file ${file}`);
+                fs.rmSync(outputPath, { force: true });
+            }
+            const ok = await downloadWithRetry(baseUrl + file, outputPath, gzipIsReadable);
+            if (ok) stats.downloaded++; else stats.failed++;
+        }
+        stats.done++;
+        if (stats.done % PROGRESS_EVERY === 0 || stats.done === files.length) {
+            logger.progress(stats.done, files.length, 'Snapshots');
+        }
+    })));
+
+    logger.info('Snapshot download finished', stats);
+    if (stats.failed > 0) process.exitCode = 1;
+}
+
+async function downloadTerrain() {
+    const outputDir = config.paths.terrain;
+    fs.mkdirSync(outputDir, { recursive: true });
+    for (const url of config.terrain.sources) {
+        const name = path.basename(new URL(url).pathname);
+        const outputPath = path.join(outputDir, name);
+        if (isNonEmptyFile(outputPath)) {
+            logger.info(`Already present, skipping ${name}`);
+            continue;
+        }
+        logger.info(`Downloading ${name} (this can take a while)`, { url });
+        const ok = await downloadWithRetry(url, outputPath);
+        if (!ok) process.exitCode = 1;
+        else logger.info(`Saved ${name}`, { bytes: fs.statSync(outputPath).size });
+    }
+    logger.info('Terrain inputs ready; next: npm run terrain');
+}
+
+async function main() {
+    const args = parseArgs(process.argv.slice(2));
+    if (args.terrain) {
+        await downloadTerrain();
+    } else {
+        await downloadSnapshots(args.date || config.defaultDate, args.verify);
+    }
+}
+
+if (require.main === module) {
+    main().catch(err => {
+        logger.error('Download failed', { error: err.message });
+        process.exit(1);
+    });
+}
+
+module.exports = { extractLinks, parseArgs, gzipIsReadable };
