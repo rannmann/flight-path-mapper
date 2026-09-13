@@ -2,235 +2,99 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flight Path Mapper - Static Build</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 3rem;
-        }
-
-        .header h1 {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .header p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-        }
-
-        .apps-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .app-card {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .app-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 32px rgba(0,0,0,0.15);
-        }
-
-        .app-card h2 {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-            color: #2c3e50;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .app-card p {
-            color: #7f8c8d;
-            margin-bottom: 1.5rem;
-        }
-
-        .launch-btn {
-            display: inline-block;
-            background: #3498db;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: background 0.3s ease;
-            margin-bottom: 1rem;
-        }
-
-        .launch-btn:hover {
-            background: #2980b9;
-        }
-
-        .data-list {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 1rem;
-        }
-
-        .data-list h4 {
-            margin-bottom: 0.5rem;
-            color: #2c3e50;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .data-list ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        .data-list li {
-            padding: 0.25rem 0;
-            color: #5a6c7d;
-            font-size: 0.9rem;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .stat-card {
-            background: rgba(255,255,255,0.1);
-            border-radius: 8px;
-            padding: 1.5rem;
-            text-align: center;
-            color: white;
-            backdrop-filter: blur(10px);
-        }
-
-        .stat-card h3 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-card p {
-            opacity: 0.9;
-            font-size: 0.9rem;
-        }
-
-        .footer {
-            text-align: center;
-            color: rgba(255,255,255,0.8);
-            margin-top: 3rem;
-            padding: 2rem 0;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .apps-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .stats-grid {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            }
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Aircraft Noise Map</title>
+    <meta name="description" content="Estimated aircraft noise (Day-Night Average Sound Level) and traffic density from one day of global ADS-B data.">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23e05a1c%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%277%27 fill=%27%23fff%27 opacity=%27.85%27/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-plane"></i> Flight Path Mapper</h1>
-            <p>Interactive visualization of aircraft flight paths and noise levels</p>
+    <div id="map" role="application" aria-label="Aircraft noise map"></div>
+
+    <aside class="panel" id="panel">
+        <div class="panel-header">
+            <h1>Aircraft Noise Map <small id="subtitle">One day of global ADS-B data</small></h1>
+            <button class="panel-toggle" id="panelToggle" aria-expanded="true" aria-controls="panelBody">Hide</button>
         </div>
 
-        <div class="apps-grid">
-            <div class="app-card">
-                <h2><i class="fas fa-route"></i> Flight Path Viewer</h2>
-                <p>Explore historical flight paths around major cities. Visualize aircraft routes, altitude patterns, and traffic density.</p>
-                <a href="flightpath.html" class="launch-btn">
-                    <i class="fas fa-external-link-alt"></i> Launch Viewer
-                </a>
-                
-                <div class="data-list">
-                    <h4>Available Flight Paths</h4>
-                    <ul>
-                        <li>London, UK (20 miles)</li><li>Manchester, UK (20 miles)</li><li>Phoenix, AZ (20 miles)</li><li>Los Angeles, CA (20 miles)</li><li>Denver, CO (20 miles)</li><li>Miami, FL (20 miles)</li><li>Atlanta, GA (20 miles)</li><li>Chicago, IL (20 miles)</li><li>Boston, MA (20 miles)</li><li>Baltimore, MD (20 miles)</li><li>Dallas, TX (20 miles)</li><li>Seattle, WA (80 miles)</li><li>Tacoma, WA (20 miles)</li>
-                    </ul>
+        <div class="panel-body" id="panelBody">
+            <div class="field">
+                <div class="field-label"><span>Layer</span></div>
+                <div class="segmented" role="group" aria-label="Layer">
+                    <button type="button" data-layer="dnl" aria-pressed="true">Noise (DNL)</button>
+                    <button type="button" data-layer="traffic" aria-pressed="false">Traffic density</button>
+                    <button type="button" data-layer="above45" aria-pressed="false">Time above 45 dB</button>
                 </div>
             </div>
 
-            <div class="app-card">
-                <h2><i class="fas fa-fire"></i> Noise Heatmap</h2>
-                <p>View aircraft noise intensity heatmaps based on research-based acoustic modeling. Explore sound levels across different areas.</p>
-                <a href="heatmap.html" class="launch-btn">
-                    <i class="fas fa-external-link-alt"></i> Launch Heatmap
-                </a>
-                
-                <div class="data-list">
-                    <h4>Available Heatmaps</h4>
+            <div class="field">
+                <label class="field-label" for="minSlider">
+                    <span id="minLabel">Hide below</span>
+                    <output id="minValue" for="minSlider">35 dB</output>
+                </label>
+                <input type="range" id="minSlider" min="0" max="100" step="1" value="0">
+            </div>
+
+            <div class="field">
+                <label class="field-label" for="opacitySlider">
+                    <span>Overlay opacity</span>
+                    <output id="opacityValue" for="opacitySlider">80%</output>
+                </label>
+                <input type="range" id="opacitySlider" min="10" max="100" step="5" value="80">
+            </div>
+
+            <div class="field" id="cityField">
+                <label class="field-label" for="citySelect"><span>Jump to city</span></label>
+                <select id="citySelect">
+                    <option value="">Choose a city...</option>
+                </select>
+            </div>
+
+            <div class="legend" id="legend" aria-live="polite">
+                <div class="legend-title" id="legendTitle">Noise (DNL)</div>
+                <div class="legend-rows" id="legendRows"></div>
+                <p class="legend-note" id="legendNote"></p>
+            </div>
+
+            <details class="about" id="about">
+                <summary>About this map</summary>
+                <div class="about-body">
+                    <p><b>DNL</b> (Day-Night Average Sound Level) is the 24-hour average A-weighted sound level with a 10 dB penalty added to everything between 22:00 and 07:00. It is the metric used by the US FAA and many other regulators to describe airport noise exposure.</p>
+                    <p>This map covers <b id="aboutDate">one day</b> of ADS-B position reports from ADS-B Exchange. Each aircraft sighting is turned into an A-weighted level at every nearby ground cell (roughly 1 km) and integrated over the day.</p>
+                    <p><b>Time above 45 dB</b> is for people who care about audible events rather than averages: it is the clock time per day during which at least one aircraft is estimated at 45 dB or louder at that cell, roughly the level that is clearly audible indoors in a quiet room. Overlapping aircraft count once, so it never exceeds 24 hours. Aircraft only: road and rail noise are not included, and a blank cell can mean no receiver coverage rather than silence.</p>
+                    <p>Main assumptions:</p>
                     <ul>
-                        <li>CAN Toronto</li><li>DE Berlin</li><li>FRA Paris</li><li>JPN Tokyo</li><li>GBR London</li><li>GBR Manchester</li><li>USA AK Anchorage</li><li>USA AZ Phoenix</li><li>USA CA LosAngeles</li><li>USA CO Denver</li><li>USA FL Miami</li><li>USA GA Atlanta</li><li>USA IL Chicago</li><li>USA MA Boston</li><li>USA TX Dallas</li><li>USA WA Seattle</li>
+                        <li>Source levels come from a table indexed by ADS-B emitter category (light, small, large, heavy, rotorcraft...) and flight phase, not from the specific aircraft type.</li>
+                        <li>Spherical spreading, 1 dB/km atmospheric absorption, and SAE AIR 5662 lateral attenuation by lateral distance and elevation angle.</li>
+                        <li>Height above ground from ETOPO 2022 terrain (2 arc-minute), with airport elevations overriding it near runways.</li>
+                        <li>Night is defined by local solar time (UTC + longitude / 15 h), not civil time zones.</li>
+                        <li>Traffic density counts seconds of aircraft presence per cell over the day; overlapping aircraft add.</li>
                     </ul>
+                    <p>These are <b>estimates, not measurements</b>. Coverage depends on ADS-B receivers, so oceans and remote areas are under-reported, and a single day may not reflect typical operations.</p>
+                    <p id="aboutGenerated"></p>
+                    <p><a href="https://github.com/rannmann/flight-path-mapper">Source code and methodology</a></p>
                 </div>
-            </div>
+            </details>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>13</h3>
-                <p>Flight Path Datasets</p>
-            </div>
-            <div class="stat-card">
-                <h3>16</h3>
-                <p>Noise Heatmaps</p>
-            </div>
-            <div class="stat-card">
-                <h3>16</h3>
-                <p>Cities Configured</p>
-            </div>
-            <div class="stat-card">
-                <h3>1.0.0</h3>
-                <p>Build Version</p>
-            </div>
+        <div class="panel-footer">
+            <span class="status" id="status"><span class="status-dot"></span><span id="statusText">Loading...</span></span>
+            <a href="flightpaths.html">Flight paths &rsaquo;</a>
         </div>
+    </aside>
 
-        <div class="footer">
-            <p>Generated on 6/23/2025, 4:17:44 PM</p>
-            <p>Data from 2023-09-01 • Static build for deployment</p>
-        </div>
+    <div class="readout empty" id="readout" aria-live="polite">
+        <div class="readout-value" id="readoutValue">Hover or tap the map</div>
+        <div class="readout-sub" id="readoutSub"></div>
     </div>
+
+    <div class="toast" id="toast" hidden></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="js/value-tiles.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>

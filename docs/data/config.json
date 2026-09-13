@@ -1,75 +1,162 @@
 {
-  "cities": {
-    "CAN_Toronto": {
-      "lat": 43.6532,
-      "lon": -79.3832
+  "date": "2023-09-01",
+  "cities": [
+    {
+      "key": "NLD_Amsterdam",
+      "name": "Amsterdam, NLD",
+      "lat": 52.3676,
+      "lon": 4.9041
     },
-    "DE_Berlin": {
-      "lat": 52.52,
-      "lon": 13.405
-    },
-    "FRA_Paris": {
-      "lat": 48.8566,
-      "lon": 2.3522
-    },
-    "JPN_Tokyo": {
-      "lat": 35.6762,
-      "lon": 139.6503
-    },
-    "GBR_London": {
-      "lat": 51.5074,
-      "lon": -0.1278
-    },
-    "GBR_Manchester": {
-      "lat": 53.4808,
-      "lon": -2.2426
-    },
-    "USA_AK_Anchorage": {
+    {
+      "key": "USA_AK_Anchorage",
+      "name": "Anchorage, AK, USA",
       "lat": 61.2181,
       "lon": -149.9003
     },
-    "USA_AZ_Phoenix": {
-      "lat": 33.4484,
-      "lon": -112.074
-    },
-    "USA_CA_LosAngeles": {
-      "lat": 34.0522,
-      "lon": -118.2437
-    },
-    "USA_CO_Denver": {
-      "lat": 39.7392,
-      "lon": -104.9903
-    },
-    "USA_FL_Miami": {
-      "lat": 25.7617,
-      "lon": -80.1918
-    },
-    "USA_GA_Atlanta": {
+    {
+      "key": "USA_GA_Atlanta",
+      "name": "Atlanta, GA, USA",
       "lat": 33.749,
       "lon": -84.388
     },
-    "USA_IL_Chicago": {
-      "lat": 41.8781,
-      "lon": -87.6298
+    {
+      "key": "DE_Berlin",
+      "name": "Berlin, DE",
+      "lat": 52.52,
+      "lon": 13.405
     },
-    "USA_MA_Boston": {
+    {
+      "key": "USA_MA_Boston",
+      "name": "Boston, MA, USA",
       "lat": 42.3601,
       "lon": -71.0589
     },
-    "USA_TX_Dallas": {
+    {
+      "key": "USA_IL_Chicago",
+      "name": "Chicago, IL, USA",
+      "lat": 41.8781,
+      "lon": -87.6298
+    },
+    {
+      "key": "USA_TX_Dallas",
+      "name": "Dallas, TX, USA",
       "lat": 32.7767,
       "lon": -96.797
     },
-    "USA_WA_Seattle": {
+    {
+      "key": "USA_CO_Denver",
+      "name": "Denver, CO, USA",
+      "lat": 39.7392,
+      "lon": -104.9903
+    },
+    {
+      "key": "ARE_Dubai",
+      "name": "Dubai, ARE",
+      "lat": 25.2048,
+      "lon": 55.2708
+    },
+    {
+      "key": "DE_Frankfurt",
+      "name": "Frankfurt, DE",
+      "lat": 50.1109,
+      "lon": 8.6821
+    },
+    {
+      "key": "HKG_HongKong",
+      "name": "Hong Kong, HKG",
+      "lat": 22.3193,
+      "lon": 114.1694
+    },
+    {
+      "key": "ZAF_Johannesburg",
+      "name": "Johannesburg, ZAF",
+      "lat": -26.2041,
+      "lon": 28.0473
+    },
+    {
+      "key": "GBR_London",
+      "name": "London, GBR",
+      "lat": 51.5074,
+      "lon": -0.1278
+    },
+    {
+      "key": "USA_CA_LosAngeles",
+      "name": "Los Angeles, CA, USA",
+      "lat": 34.0522,
+      "lon": -118.2437
+    },
+    {
+      "key": "GBR_Manchester",
+      "name": "Manchester, GBR",
+      "lat": 53.4808,
+      "lon": -2.2426
+    },
+    {
+      "key": "MEX_MexicoCity",
+      "name": "Mexico City, MEX",
+      "lat": 19.4326,
+      "lon": -99.1332
+    },
+    {
+      "key": "USA_FL_Miami",
+      "name": "Miami, FL, USA",
+      "lat": 25.7617,
+      "lon": -80.1918
+    },
+    {
+      "key": "IND_Mumbai",
+      "name": "Mumbai, IND",
+      "lat": 19.076,
+      "lon": 72.8777
+    },
+    {
+      "key": "FRA_Paris",
+      "name": "Paris, FRA",
+      "lat": 48.8566,
+      "lon": 2.3522
+    },
+    {
+      "key": "USA_AZ_Phoenix",
+      "name": "Phoenix, AZ, USA",
+      "lat": 33.4484,
+      "lon": -112.074
+    },
+    {
+      "key": "BRA_SaoPaulo",
+      "name": "Sao Paulo, BRA",
+      "lat": -23.5505,
+      "lon": -46.6333
+    },
+    {
+      "key": "USA_WA_Seattle",
+      "name": "Seattle, WA, USA",
       "lat": 47.6062,
       "lon": -122.3321
+    },
+    {
+      "key": "SGP_Singapore",
+      "name": "Singapore, SGP",
+      "lat": 1.3521,
+      "lon": 103.8198
+    },
+    {
+      "key": "AUS_Sydney",
+      "name": "Sydney, AUS",
+      "lat": -33.8688,
+      "lon": 151.2093
+    },
+    {
+      "key": "JPN_Tokyo",
+      "name": "Tokyo, JPN",
+      "lat": 35.6762,
+      "lon": 139.6503
+    },
+    {
+      "key": "CAN_Toronto",
+      "name": "Toronto, CAN",
+      "lat": 43.6532,
+      "lon": -79.3832
     }
-  },
-  "defaultRadii": [
-    80
   ],
-  "defaultDate": "2023-09-01",
-  "version": "1.0.0",
-  "buildDate": "2025-06-23T23:17:44.050Z",
-  "isStatic": true
+  "generatedAt": "2026-09-13T18:05:23.061Z"
 }
