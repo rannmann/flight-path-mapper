@@ -1,14 +1,19 @@
 # Flight Path Mapper
 
-A planet-wide map of aircraft noise, built from one day of ADS-B Exchange
-position data and served as static image tiles from GitHub Pages. A second,
-smaller product draws the actual flight paths around a set of cities.
+**Live map: <https://noise.ravenwoodsoftware.org/>**
+
+A planet-wide map of aircraft noise, built from ADS-B Exchange position
+data (currently twelve days, the first of each month from October 2025 to
+September 2026, averaged) and served as static image tiles from GitHub
+Pages. Three layers: Day-Night Average Sound Level, traffic density, and
+time per day above 45 dB. A second, smaller product draws the actual
+flight paths around a set of cities.
 
 The idea is simple: every aircraft snapshot (17,280 of them, 5 s apart)
 becomes a moving noise source; the ground beneath it receives a level that
 falls off with distance; those levels are integrated over the whole day
 into a **Day-Night Average Sound Level (DNL)** for every 30 arc-second cell
-on Earth. The result shows which neighbourhoods sit under approach paths,
+on Earth, and days are averaged when more than one is available. The result shows which neighbourhoods sit under approach paths,
 next to runways, or beneath cruise corridors, and which are quiet.
 
 ## The metric, in plain language
