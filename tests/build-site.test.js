@@ -1,7 +1,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { build, cityDisplayName } = require('../scripts/build-site');
+const { build, cityDisplayName, normaliseSiteUrl, stampCanonical } = require('../scripts/build-site');
 
 function tree(root, files) {
   for (const [rel, content] of Object.entries(files)) {
@@ -13,7 +13,7 @@ function tree(root, files) {
 
 describe('build-site', () => {
   let root, dirs;
-  const config = { defaultDate: '2023-09-01', cities: { USA_WA_Seattle: { lat: 47.6, lon: -122.3 } } };
+  const config = { defaultDate: '2023-09-01', siteUrl: 'https://noise.example.org', cities: { USA_WA_Seattle: { lat: 47.6, lon: -122.3 } } };
 
   beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), 'build-site-'));
@@ -22,7 +22,8 @@ describe('build-site', () => {
       tilesDir: path.join(root, 'tiles'), flightpathsDir: path.join(root, 'flightpaths')
     };
     tree(root, {
-      'site/index.html': '<html>',
+      'site/index.html': '<html>\n<head>\n    <title>x</title>\n</head>\n<body></body></html>',
+      'site/flightpaths.html': '<html>\n<head>\n    <link rel="canonical" href="https://old.example/">\n</head>\n</html>',
       'tiles/meta.json': JSON.stringify({ date: '2023-09-01', maxZoom: 3 }),
       'tiles/dnl/0/0_0.png': 'png',
       // already published (curated) flight paths
@@ -46,6 +47,13 @@ describe('build-site', () => {
     expect(fs.existsSync(path.join(dirs.docsDir, 'index.html'))).toBe(true);
     expect(fs.existsSync(path.join(dirs.docsDir, 'data/tiles/dnl/0/0_0.png'))).toBe(true);
     expect(fs.existsSync(path.join(dirs.docsDir, '.nojekyll'))).toBe(true);
+    expect(fs.readFileSync(path.join(dirs.docsDir, 'CNAME'), 'utf8')).toBe('noise.example.org\n');
+    const index = fs.readFileSync(path.join(dirs.docsDir, 'index.html'), 'utf8');
+    expect(index).toContain('<link rel="canonical" href="https://noise.example.org/">');
+    expect(index).toContain('<meta property="og:url" content="https://noise.example.org/">');
+    const fp = fs.readFileSync(path.join(dirs.docsDir, 'flightpaths.html'), 'utf8');
+    expect(fp).toContain('href="https://noise.example.org/flightpaths.html"');
+    expect(fp).not.toContain('old.example');
     expect(fs.existsSync(path.join(root, '.flightpaths-keep'))).toBe(false);
     expect(r.flightpathCount).toBe(1);
     const cfg = JSON.parse(fs.readFileSync(path.join(dirs.docsDir, 'data/config.json'), 'utf8'));
@@ -78,5 +86,22 @@ describe('build-site', () => {
   test('cityDisplayName', () => {
     expect(cityDisplayName('USA_CA_LosAngeles')).toBe('Los Angeles, CA, USA');
     expect(cityDisplayName('GBR_London')).toBe('London, GBR');
+  });
+
+  test('no siteUrl means no CNAME and untouched pages', () => {
+    build({ ...dirs, config: { ...config, siteUrl: null }, log: () => {} });
+    expect(fs.existsSync(path.join(dirs.docsDir, 'CNAME'))).toBe(false);
+    expect(fs.readFileSync(path.join(dirs.docsDir, 'index.html'), 'utf8')).not.toContain('canonical');
+  });
+
+  test('normaliseSiteUrl and stampCanonical', () => {
+    expect(normaliseSiteUrl('https://a.b')).toBe('https://a.b/');
+    expect(normaliseSiteUrl('https://a.b/')).toBe('https://a.b/');
+    expect(normaliseSiteUrl('')).toBeNull();
+    expect(() => normaliseSiteUrl('a.b')).toThrow(/http/);
+    const out = stampCanonical('<html>\n<head>\n    <title>t</title>\n</head>\n</html>', 'https://a.b/');
+    expect(out.match(/canonical/g)).toHaveLength(1);
+    expect(stampCanonical(out, 'https://c.d/').match(/canonical/g)).toHaveLength(1);
+    expect(stampCanonical(out, 'https://c.d/')).toContain('https://c.d/');
   });
 });

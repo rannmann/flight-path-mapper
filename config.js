@@ -22,6 +22,9 @@ const config = {
   },
 
   // All paths are relative to the repository root
+  // Public address of the built site; written to docs/CNAME and used for canonical links.
+  siteUrl: process.env.SITE_URL || 'https://noise.ravenwoodsoftware.org',
+
   paths: {
     flightHistory: 'data/flight-history', // <date>/HHMMSSZ.json.gz snapshots
     flightPaths: 'data/flightpaths',      // per-city GeoJSON

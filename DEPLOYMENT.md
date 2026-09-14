@@ -19,8 +19,12 @@ Two options; both serve `docs/` as the site root.
 merge `main` into `github-pages`, run `npm run build` there, commit
 `docs/`, and point Pages at that branch with folder `/docs`.
 
-The page is served at `https://<user>.github.io/<repo>/`. Tiles are loaded
-with relative URLs, so no base-path configuration is needed.
+The page is served at `https://<user>.github.io/<repo>/`, or at the custom
+domain in `siteUrl` (`config.js`, currently noise.ravenwoodsoftware.org):
+the build writes `docs/CNAME` and canonical / og:url tags from it, so the
+domain survives every rebuild. The DNS side is one CNAME record pointing
+at `<user>.github.io`. Tiles are loaded with relative URLs, so no
+base-path configuration is needed either way.
 
 ## What gets committed
 
