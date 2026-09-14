@@ -40,6 +40,23 @@ function citiesFromConfig(config) {
         .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** "https://noise.example.org" -> "https://noise.example.org/", or null when unset. */
+function normaliseSiteUrl(url) {
+    if (!url || typeof url !== 'string') return null;
+    const u = url.trim();
+    if (!/^https?:\/\//.test(u)) throw new Error(`siteUrl must start with http(s)://, got ${u}`);
+    return u.endsWith('/') ? u : u + '/';
+}
+
+/** Insert (or replace) canonical and og:url tags in a page's <head>. */
+function stampCanonical(html, pageUrl) {
+    const tags = `<link rel="canonical" href="${pageUrl}">\n    <meta property="og:url" content="${pageUrl}">`;
+    const stripped = html
+        .replace(/\s*<link rel="canonical"[^>]*>/g, '')
+        .replace(/\s*<meta property="og:url"[^>]*>/g, '');
+    return stripped.replace(/(\n(\s*)<\/head>)/, (m, end, indent) => `\n${indent}    ${tags}${end}`);
+}
+
 function readJsonIfExists(file) {
     try {
         return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -149,8 +166,17 @@ function build({
     };
     fs.writeFileSync(path.join(docsDir, 'data', 'config.json'), JSON.stringify(siteConfig, null, 2) + '\n');
 
-    // 6. GitHub Pages: serve files as-is
+    // 6. GitHub Pages: serve files as-is, and claim the custom domain if one is configured
     fs.writeFileSync(path.join(docsDir, '.nojekyll'), '');
+    const siteUrl = normaliseSiteUrl(config.siteUrl);
+    if (siteUrl) {
+        fs.writeFileSync(path.join(docsDir, 'CNAME'), new URL(siteUrl).hostname + '\n');
+        for (const page of ['index.html', 'flightpaths.html']) {
+            const file = path.join(docsDir, page);
+            if (!fs.existsSync(file)) continue;
+            fs.writeFileSync(file, stampCanonical(fs.readFileSync(file, 'utf8'), siteUrl + (page === 'index.html' ? '' : page)));
+        }
+    }
 
     // Summary
     const total = dirSize(docsDir);
@@ -162,7 +188,7 @@ function build({
     return { docsDir: docsDir, config: siteConfig, meta, total, flightpathCount };
 }
 
-module.exports = { build, cityDisplayName, citiesFromConfig };
+module.exports = { build, cityDisplayName, citiesFromConfig, normaliseSiteUrl, stampCanonical };
 
 if (require.main === module) {
     const args = process.argv.slice(2);
